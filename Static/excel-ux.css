@@ -1,0 +1,483 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   ASCENT — Excel-UX patch  (v2)
+   Load AFTER single-page.css.
+   Data-flow map styles removed; fuel-row / fugitive-row styles added.
+═══════════════════════════════════════════════════════════════════════ */
+
+/* ───────────────────────────────────────────────────────────────────────
+   1. Scope-gated section dimming
+─────────────────────────────────────────────────────────────────────── */
+.form-section.out-of-scope {
+  opacity: 0.45;
+  pointer-events: none;
+  position: relative;
+}
+.form-section.out-of-scope::after {
+  content: attr(data-scope-msg);
+  position: absolute;
+  top: 18px; right: 24px;
+  font-size: 0.7rem; font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  background: var(--light);
+  border: 1px solid var(--border);
+  padding: 4px 12px;
+  border-radius: 100px;
+  pointer-events: auto;
+}
+.field-group.out-of-scope,
+.sub-panel.out-of-scope {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* ───────────────────────────────────────────────────────────────────────
+   2. Floor-area auto-fill block (inside each fuel-tab sub-panel)
+─────────────────────────────────────────────────────────────────────── */
+.floor-area-block {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  background: var(--light, #f4f7fc);
+  border: 1px solid var(--border, #dde3ef);
+  border-radius: 8px;
+  margin-bottom: 14px;
+}
+.floor-area-label {
+  flex: 0 0 140px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted, #7a8ba8);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+.floor-area-input {
+  flex: 0 0 220px;
+  font-size: 0.82rem !important;
+}
+
+/* ───────────────────────────────────────────────────────────────────────
+   3. Fuel rows — shared layout for res / com / ins / ind / egen
+─────────────────────────────────────────────────────────────────────── */
+.fuel-rows-host {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.fuel-row {
+  background: var(--card, #fff);
+  border: 1px solid var(--border, #dde3ef);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+.fuel-row:hover { border-color: var(--mint, #78c8a5); }
+
+.fuel-row-inner {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+/* Column widths */
+.fuel-select-wrap  { flex: 2 1 200px; border-right: 1px solid var(--border, #dde3ef); }
+.fuel-value-wrap   { flex: 1 1 100px; border-right: 1px solid var(--border, #dde3ef); }
+.fuel-unit-wrap    { flex: 1 1 110px; border-right: 1px solid var(--border, #dde3ef); }
+
+.fuel-row-inner .field-input {
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: 0.82rem;
+  padding: 9px 12px;
+  height: 38px;
+  width: 100%;
+}
+.fuel-row-inner .field-input:focus {
+  background: rgba(120, 200, 165, 0.06) !important;
+  outline: none;
+}
+
+/* Delete button */
+.fuel-del-btn {
+  flex: 0 0 36px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--muted, #7a8ba8);
+  transition: color 0.15s, background 0.15s;
+}
+.fuel-del-btn:hover {
+  color: #e05454;
+  background: rgba(224, 84, 84, 0.06);
+}
+
+/* "Add fuel row" button */
+.fuel-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1.5px dashed var(--border, #dde3ef);
+  border-radius: 8px;
+  background: transparent;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted, #7a8ba8);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  margin-top: 2px;
+}
+.fuel-add-btn:hover {
+  border-color: var(--mint, #78c8a5);
+  color: var(--navy, #1a2744);
+  background: rgba(120, 200, 165, 0.06);
+}
+
+/* ───────────────────────────────────────────────────────────────────────
+   4. Manufacturing & Energy Industries rows (extra sub-category column)
+─────────────────────────────────────────────────────────────────────── */
+.mfg-inner {
+  flex-wrap: nowrap;
+}
+.mfg-subcat-wrap {
+  flex: 1.6 1 180px;
+  border-right: 1px solid var(--border, #dde3ef);
+}
+
+/* ───────────────────────────────────────────────────────────────────────
+   5. Fugitive Emissions — uses same bty-table style as all other E&B tabs.
+      Old flex-card layout removed. Only fug-unit (readonly) styling kept.
+─────────────────────────────────────────────────────────────────────── */
+
+/* ───────────────────────────────────────────────────────────────────────
+   6. Per-section "Reset to defaults" button
+─────────────────────────────────────────────────────────────────────── */
+.section-header { position: relative; }
+
+.reset-section-btn {
+  position: absolute;
+  top: 0; right: 0;
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  font-size: 0.72rem; font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.reset-section-btn:hover {
+  border-color: var(--mint);
+  color: var(--navy);
+  background: rgba(120, 200, 165, 0.08);
+}
+.reset-section-btn svg { flex-shrink: 0; }
+.reset-section-btn.just-reset {
+  background: rgba(120, 200, 165, 0.18);
+  border-color: var(--mint);
+  color: var(--navy);
+}
+
+/* ───────────────────────────────────────────────────────────────────────
+   7. Section-jump flash feedback
+─────────────────────────────────────────────────────────────────────── */
+@keyframes excel-ux-section-flash {
+  0%   { box-shadow: 0 0 0 3px rgba(120, 200, 165, 0.45); }
+  100% { box-shadow: 0 0 0 0   rgba(120, 200, 165, 0); }
+}
+.form-section.section-jumped-to {
+  animation: excel-ux-section-flash 0.85s ease;
+  border-radius: 12px;
+}
+
+/* ───────────────────────────────────────────────────────────────────────
+   8. "Results already computed" banner
+─────────────────────────────────────────────────────────────────────── */
+.results-ready-banner {
+  display: none;
+  align-items: center; gap: 12px;
+  padding: 12px 18px;
+  margin: 0 0 18px;
+  background: linear-gradient(90deg,
+              rgba(120, 200, 165, 0.18),
+              rgba(120, 200, 165, 0.06));
+  border: 1px solid rgba(120, 200, 165, 0.4);
+  border-radius: 12px;
+  font-size: 0.85rem;
+  color: var(--navy);
+}
+.results-ready-banner.visible { display: flex; }
+.results-ready-banner svg { color: var(--mint-2); flex-shrink: 0; }
+.results-ready-banner b { font-weight: 700; }
+.results-ready-banner .rrb-spacer { flex: 1; }
+.results-ready-banner .rrb-link {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 14px;
+  border-radius: 100px;
+  font-size: 0.78rem; font-weight: 600;
+  text-decoration: none;
+  cursor: pointer; border: none;
+}
+.results-ready-banner .rrb-view { background: var(--navy); color: #fff; }
+.results-ready-banner .rrb-view:hover { background: var(--mint-2); color: var(--navy); }
+.results-ready-banner .rrb-dismiss {
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--border);
+}
+.results-ready-banner .rrb-dismiss:hover { border-color: var(--mint); color: var(--navy); }
+
+/* ───────────────────────────────────────────────────────────────────────
+   9. AFOLU method tabs
+─────────────────────────────────────────────────────────────────────── */
+.form-section[data-section="4"] .afolu-tabs {
+  margin-bottom: 14px;
+  max-width: 480px;
+}
+
+/* ───────────────────────────────────────────────────────────────────────
+   10. Mobile tuning
+─────────────────────────────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  .floor-area-block { flex-wrap: wrap; }
+  .floor-area-input { flex-basis: 100%; }
+  .subsection-tabs  { gap: 4px; }
+  .sub-tab          { font-size: 0.75rem; padding: 6px 10px; }
+  .bty-table-scroll { border-radius: 6px; }
+}
+
+@media (max-width: 640px) {
+  .reset-section-btn {
+    position: static;
+    margin-top: 8px;
+  }
+  .form-section.out-of-scope::after {
+    top: auto; bottom: -14px; right: auto; left: 0;
+  }
+}
+
+/* ───────────────────────────────────────────────────────────────────────
+   Climate Zone auto-detect feedback
+   Fires for 1.2 s on the read-only input when district is selected.
+   The JS adds .climate-autofilled and removes it after the duration.
+─────────────────────────────────────────────────────────────────────── */
+@keyframes climate-pulse {
+  0%   { box-shadow: 0 0 0 0   rgba(120, 200, 165, 0.55);
+         border-color: var(--mint, #78c8a5); }
+  50%  { box-shadow: 0 0 0 5px rgba(120, 200, 165, 0.18);
+         border-color: var(--mint-2, #5fb78f); }
+  100% { box-shadow: 0 0 0 0   rgba(120, 200, 165, 0);
+         border-color: var(--border, #e6dec8); }
+}
+
+#climateDisplay.climate-autofilled {
+  animation: climate-pulse 1.2s ease forwards;
+  background: rgba(120, 200, 165, 0.10) !important;
+  color: var(--navy, #1f3663) !important;
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   bty-table row × button and fugitive unit display
+   (used by all EB sections: Res → EInd, Fugitive, Renewables)
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Sub-panel show/hide (tab switching within a section) ── */
+.sub-panel {
+  display: none;
+}
+.sub-panel.active {
+  display: block;
+}
+
+/* ── Sub-tab pill styling ── */
+.subsection-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid var(--border, #dde3ef);
+  padding-bottom: 0;
+}
+.sub-tab {
+  padding: 8px 16px;
+  border: 1.5px solid var(--border, #dde3ef);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  background: var(--light, #f4f7fc);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted, #7a8ba8);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-bottom: -2px;
+}
+.sub-tab:hover {
+  background: #fff;
+  color: var(--navy, #1a2744);
+  border-color: var(--mint, #78c8a5);
+}
+.sub-tab.active {
+  background: #fff;
+  color: var(--navy, #1a2744);
+  border-color: var(--mint, #78c8a5);
+  border-bottom-color: #fff;
+  z-index: 1;
+}
+
+/* ── bty-table: the shared table style for ALL Energy & Buildings tabs ── */
+.bty-table-scroll {
+  overflow-x: auto;
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--border, #dde3ef);
+  margin-bottom: 2px;
+}
+.bty-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  background: #fff;
+}
+.bty-table thead tr {
+  background: var(--navy, #1a2744);
+}
+.bty-table thead th {
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 9px 12px;
+  text-align: left;
+  white-space: nowrap;
+  border-right: 1px solid rgba(255,255,255,0.08);
+}
+.bty-table thead th:last-child { border-right: none; }
+.bty-table tbody tr {
+  border-bottom: 1px solid var(--border, #dde3ef);
+  transition: background 0.12s ease;
+}
+.bty-table tbody tr:last-child { border-bottom: none; }
+.bty-table tbody tr:hover { background: rgba(120,200,165,0.05); }
+.bty-table tbody td {
+  padding: 0;
+  border-right: 1px solid var(--border, #dde3ef);
+  vertical-align: middle;
+}
+.bty-table tbody td:last-child { border-right: none; }
+
+/* Inputs inside bty-table cells */
+.bty-input {
+  width: 100%;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: 0.82rem;
+  padding: 9px 12px;
+  height: 38px;
+  color: var(--navy, #1a2744);
+  outline: none;
+}
+.bty-input:focus {
+  background: rgba(120,200,165,0.07) !important;
+}
+.bty-input::placeholder { color: #b0bcc8; }
+select.bty-input { cursor: pointer; }
+
+/* Group/subtotal rows (used in Electricity Generation) */
+.bty-table tbody .group-row td {
+  background: var(--navy, #1a2744);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  padding: 6px 12px;
+}
+.bty-table tbody .subtotal-row td {
+  background: var(--light, #f4f7fc);
+  font-weight: 700;
+}
+.bty-table .bty-label {
+  padding: 9px 12px;
+  font-weight: 500;
+  color: var(--navy, #1a2744);
+  white-space: nowrap;
+}
+
+/* ── Add-row button ── */
+.add-row-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 7px 16px;
+  border: 1.5px dashed var(--border, #dde3ef);
+  border-radius: 8px;
+  background: transparent;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted, #7a8ba8);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.add-row-btn:hover {
+  border-color: var(--mint, #78c8a5);
+  color: var(--navy, #1a2744);
+  background: rgba(120,200,165,0.07);
+}
+
+/* ── Panel hint bar ── */
+.panel-hint {
+  font-size: 0.8rem;
+  color: var(--muted, #7a8ba8);
+  background: rgba(120,200,165,0.07);
+  border: 1px solid rgba(120,200,165,0.2);
+  border-radius: 8px;
+  padding: 9px 14px;
+  margin-bottom: 14px;
+}
+
+.bty-x-cell {
+  text-align: center;
+  width: 32px;
+  padding: 0 !important;
+}
+.row-x-btn {
+  background: none; border: none; cursor: pointer;
+  color: #94a3b8; padding: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+.row-x-btn:hover { color: #e05454; background: rgba(224,84,84,0.08); }
+
+/* Readonly unit display in Fugitive rows */
+.fug-unit {
+  background: var(--light, #f4f7fc) !important;
+  color: var(--muted, #7a8ba8) !important;
+  font-size: 0.78rem !important;
+  font-style: italic; cursor: default;
+}
+
+/* Floor area auto-fill badge */
+.eb-floor-badge {
+  flex: 0 0 auto; font-size: 0.62rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--mint-2, #4aaa80);
+  background: rgba(120,200,165,0.15);
+  border: 1px solid rgba(120,200,165,0.3);
+  padding: 2px 8px; border-radius: 100px;
+}

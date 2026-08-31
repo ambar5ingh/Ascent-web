@@ -1,0 +1,162 @@
+/* ═══════════════════════════════════════════════════════
+   ASCENT — Single-page questionnaire patch
+   Drop in AFTER main.css to flip the form to one scrollable page
+   while preserving all existing markup and IDs.
+═══════════════════════════════════════════════════════ */
+
+/* ── Show every section at once ─────────────────────────── */
+.form-section {
+  display: block !important;
+  animation: none !important;
+  margin-bottom: 48px;
+  scroll-margin-top: 140px;          /* offset for sticky nav */
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.form-section:first-of-type {
+  border-top: none;
+}
+
+/* Add a subtle "you-are-here" highlight while scrolling */
+.form-section.in-view .section-header .section-title {
+  color: var(--navy);
+  transition: color 0.3s ease;
+  text-shadow: 0 0 0.5px var(--mint-2);
+}
+
+/* ── Make the progress strip sticky so it doubles as nav ── */
+.hero {
+  padding-bottom: 16px !important;
+}
+
+.progress-bar-wrap {
+  position: sticky;
+  top: 64px;             /* sits just under .site-header */
+  z-index: 50;
+  background: rgba(250, 246, 236, 0.92);
+  backdrop-filter: blur(10px);
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 12px rgba(31, 54, 99, 0.05);
+  margin-top: 8px;
+}
+
+/* Make progress section labels feel like nav links */
+.ps {
+  padding: 4px 6px !important;
+  border-radius: 6px;
+}
+.ps:hover {
+  background: rgba(120, 200, 165, 0.10);
+  color: var(--navy);
+}
+.ps.in-view {
+  color: var(--navy);
+  background: rgba(120, 200, 165, 0.14);
+}
+.ps.in-view::after {
+  transform: scaleX(1);
+}
+
+/* ── Hide the legacy prev/next/dots; not needed on one page ─ */
+.form-nav { display: none !important; }
+
+/* ── Floating "Calculate" CTA visible from anywhere ──────── */
+.spc-fab {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 60;
+  background: var(--navy);
+  color: #fff;
+  border: none;
+  border-radius: 100px;
+  padding: 14px 26px;
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 10px 28px rgba(26, 39, 68, 0.32);
+  transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+}
+.spc-fab:hover {
+  transform: translateY(-2px);
+  background: var(--mint-2);
+  color: var(--navy);
+  box-shadow: 0 12px 32px rgba(120, 200, 165, 0.40);
+}
+.spc-fab svg { flex-shrink: 0; }
+
+/* "Back to top" pill, appears once user scrolls down */
+.spc-top {
+  position: fixed;
+  right: 24px;
+  bottom: 88px;
+  z-index: 60;
+  background: var(--card);
+  color: var(--navy);
+  border: 1.5px solid var(--border);
+  border-radius: 100px;
+  width: 44px;
+  height: 44px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.spc-top:hover {
+  border-color: var(--mint);
+  color: var(--navy);
+  background: rgba(120,200,165,0.10);
+}
+.spc-top.visible {
+  display: flex;
+}
+
+/* ── Pin the existing submit area at the foot of the form ─ */
+.submit-area {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  margin-top: 24px;
+}
+
+/* Mobile tweaks ─ keep the FAB friendly on small screens */
+@media (max-width: 640px) {
+  .progress-bar-wrap {
+    top: 56px;
+    padding: 8px 10px;
+  }
+  .progress-sections {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+  }
+  .progress-sections::-webkit-scrollbar { display: none; }
+  .ps {
+    flex-shrink: 0;
+    font-size: 0.62rem !important;
+  }
+  .spc-fab {
+    right: 14px;
+    bottom: 14px;
+    padding: 12px 18px;
+    font-size: 0.82rem;
+  }
+  .spc-top {
+    right: 14px;
+    bottom: 70px;
+    width: 38px;
+    height: 38px;
+  }
+}
