@@ -1,0 +1,2555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ASCENT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}?v=2">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/single-page.css') }}?v=2">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/excel-ux.css') }}?v=2">
+</head>
+<body>
+  <!-- Animated background -->
+  <div class="bg-grid"></div>
+  <div class="bg-orb orb1"></div>
+  <div class="bg-orb orb2"></div>
+
+  <!-- Header -->
+  <header class="site-header">
+    <a href="/" style="display:flex;text-decoration:none">
+      <img src="{{ url_for('static', filename='img/logo-blue.png') }}"
+           alt="ASCENT" class="brand-logo">
+    </a>
+    <div class="header-meta">
+      <a href="/target" class="header-logout" style="margin-right:0.6rem">🎯 Target Setting Tool</a>
+      {% if current_user %}
+      <div class="header-user">
+        <span class="header-user-name">{{ current_user }}</span>
+        <a href="/logout" class="header-logout">Logout</a>
+      </div>
+      {% endif %}
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1 class="hero-title">
+      <span class="gradient-text">GHG Inventory</span>
+    </h1>
+    <p class="hero-sub">Fill in the questionnaire below to generate a complete GHG Emissions Inventory.</p>
+    <div class="progress-bar-wrap">
+      <div class="progress-sections">
+        <span class="ps active" data-sec="0">Info</span>
+        <span class="ps" data-sec="1">Energy</span>
+        <span class="ps" data-sec="2">Electricity</span>
+        <span class="ps" data-sec="3">Transport</span>
+        <span class="ps" data-sec="4">Waste</span>
+        <span class="ps" data-sec="5">Agriculture</span>
+        <span class="ps" data-sec="6">Industry</span>
+        <span class="ps" data-sec="7">Targets</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+  </section>
+ 
+  <!-- Main Form -->
+  <main class="form-container">
+    <form id="ascentForm" novalidate>
+ 
+      <!-- ══════════════ SECTION 0: City Info ══════════════ -->
+      <div class="form-section active" data-section="0">
+        <div class="section-header">
+          <div class="section-number">01</div>
+          <div>
+            <h2 class="section-title">Basic Information</h2>
+            <p class="section-desc">Select your area and configure basic parameters</p>
+          </div>
+        </div>
+ 
+        <div class="field-grid">
+          <!-- Government Tier comes FIRST; it gates the State/District/City controls below -->
+          <div class="field-group full">
+            <label class="field-label">Government Tier</label>
+            <div class="select-wrap">
+              <select id="govTier" name="tier" class="field-input" required>
+                <option value="">— Choose a tier —</option>
+                <option value="State">State</option>
+                <option value="District">District</option>
+                <option value="City">City</option>
+                <option value="Village">Village</option>
+              </select>
+            </div>
+          </div>
+ 
+          <div class="field-group full">
+            <label class="field-label">Select State</label>
+            <div class="select-wrap" id="stateWrap" data-tooltip="Choose a Government Tier first">
+              <select id="stateSelect" class="field-input" required disabled>
+                <option value="">— Choose a state —</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">District</label>
+            <div class="select-wrap" id="districtWrap" data-tooltip="Pick District / City / Village in Government Tier to enable">
+              <select id="districtSelect" class="field-input" required disabled>
+                <option value="">— Choose district —</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">City / ULB</label>
+            <div class="select-wrap" id="cityWrap" data-tooltip="Pick City in Government Tier to enable">
+              <select id="citySelect" name="city" class="field-input" required disabled>
+                <option value="">— Choose city —</option>
+              </select>
+            </div>
+          </div>
+          <!-- Village name (free-text), shown only when Government Tier = Village -->
+          <div class="field-group" id="villageWrap" style="display:none">
+            <label class="field-label">Village Name</label>
+            <input type="text" id="villageName" name="village_name"
+                   class="field-input" placeholder="Enter village name"/>
+          </div>
+          <input type="hidden" id="stateHidden" name="state"/>
+          <input type="hidden" id="districtHidden" name="district"/>
+          <input type="hidden" id="climateHidden" name="climate"/>
+
+          <!-- ── Secondary data toggle (mirrors the Excel "Do you want to use secondary data?" dropdown) ── -->
+          <div class="field-group full">
+            <div class="secondary-toggle-card" id="secondaryToggleCard">
+              <div class="stc-text">
+                <label class="field-label" style="margin-bottom:2px">Do you want to use secondary data?</label>
+                <p class="stc-desc">When on, selecting a district auto-fills population, livestock, vehicle counts and other figures from ASCENT's built-in metadata (Census, Vahan, Livestock Census, etc.). You can edit any value after it's filled.</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="useSecondaryData" name="use_secondary_data"/>
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+            <div class="secondary-status" id="secondaryStatus" style="display:none"></div>
+          </div>
+ 
+          <div class="field-group">
+            <label class="field-label">Climate Zone <span class="auto-badge">Auto-detected</span></label>
+            <input type="text" id="climateDisplay" class="field-input readonly-input" readonly placeholder="Detected after selection"/>
+          </div>
+ 
+          <div class="field-group">
+            <label class="field-label">Population</label>
+            <div class="input-wrap">
+              <input type="number" name="population" class="field-input" placeholder="e.g. 500000" min="1000" required/>
+            </div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">City Area (km²)</label>
+            <input type="number" name="area_sqkm" class="field-input" placeholder="e.g. 150" min="1" required/>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Decadal Population Growth Rate (avg. last 10 yrs)</label>
+            <div class="input-with-unit">
+              <input type="number" name="pop_growth_rate" id="popGrowthRate" class="field-input" placeholder="e.g. 2.0" min="0" max="20" step="0.1"/>
+              <span class="unit-badge">%</span>
+            </div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Avg. Annual Rainfall</label>
+            <div class="input-with-unit">
+              <input type="number" name="annual_rainfall" class="field-input" placeholder="e.g. 800" min="0" step="1"/>
+              <span class="unit-badge">mm/yr</span>
+            </div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Avg. Minimum Temperature</label>
+            <div class="input-with-unit">
+              <input type="number" name="temp_min" class="field-input" placeholder="e.g. 15" step="0.1"/>
+              <span class="unit-badge">°C</span>
+            </div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Avg. Maximum Temperature</label>
+            <div class="input-with-unit">
+              <input type="number" name="temp_max" class="field-input" placeholder="e.g. 38" step="0.1"/>
+              <span class="unit-badge">°C</span>
+            </div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Average Temperature <span class="auto-badge">Auto-calculated</span></label>
+            <div class="input-with-unit">
+              <input type="number" name="temp_avg" id="tempAvg" class="field-input readonly-input" readonly placeholder="Auto from min + max"/>
+              <span class="unit-badge">°C</span>
+            </div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">GDP (Crore ₹)</label>
+            <div class="input-with-unit">
+              <input type="number" name="gdp" class="field-input" placeholder="e.g. 25000" min="0" step="1"/>
+              <span class="unit-badge">Cr ₹</span>
+            </div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">GDP Annual Growth Rate</label>
+            <div class="input-with-unit">
+              <input type="number" name="gdp_growth_rate" class="field-input" placeholder="e.g. 7" min="0" max="30" step="0.1"/>
+              <span class="unit-badge">%</span>
+            </div>
+          </div>
+        </div>
+ 
+        <!-- ── Base Year and Target Years Table ── -->
+        <div class="bty-table-wrap">
+          <div class="bty-table-title">Base Year and Target Years</div>
+          <div class="bty-table-scroll">
+            <table class="bty-table" id="btyTable">
+              <thead>
+                <tr>
+                  <th>Particulars</th>
+                  <th>Value (Year)</th>
+                  <th>Avg Annual Population Growth Rate (%)</th>
+                  <th>GDP / Capita Growth Rate (%)</th>
+                  <th>Population &amp; GDP Growth Rate Factor (%)</th>
+                  <th>Source</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="bty-row">
+                  <td class="bty-label">Base Year</td>
+                  <td><input type="number" name="base_year" class="field-input bty-input" value="2025" min="2000" max="2030" placeholder="e.g. dummy value"/></td>
+                  <td>
+                    <div class="input-with-unit">
+                      <input type="number" name="base_pop_growth" class="field-input bty-input bty-pop-rate" data-row="base" value="2.00" min="0" max="20" step="0.01" placeholder="e.g. dummy value"/>
+                      <span class="unit-badge">%</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="input-with-unit">
+                      <input type="number" name="base_gdp_growth" class="field-input bty-input bty-gdp-rate" data-row="base" value="3.00" min="0" max="30" step="0.01" placeholder="e.g. dummy value"/>
+                      <span class="unit-badge">%</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="input-with-unit">
+                      <input type="number" name="base_growth_factor" id="btyFactorBase" class="field-input bty-input readonly-input" readonly placeholder="e.g. dummy value"/>
+                      <span class="unit-badge">%</span>
+                    </div>
+                  </td>
+                  <td><input type="text" name="base_source" class="field-input bty-input bty-source" placeholder="e.g. Census 2011"/></td>
+                </tr>
+                <tr class="bty-row">
+                  <td class="bty-label">Interim Year 1</td>
+                  <td><input type="number" name="interim1" class="field-input bty-input" value="2030" min="2025" max="2060" placeholder="e.g. dummy value"/></td>
+                  <td>
+                    <div class="input-with-unit">
+                      <input type="number" name="interim1_pop_growth" class="field-input bty-input bty-pop-rate" data-row="interim1" value="00.00" min="0" max="20" step="0.01" placeholder="e.g. dummy value"/>
+                      <span class="unit-badge">%</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="input-with-unit">
+                      <input type="number" name="interim1_gdp_growth" class="field-input bty-input bty-gdp-rate" data-row="interim1" value="00.00" min="0" max="30" step="0.01" placeholder="e.g. dummy value"/>
+                      <span class="unit-badge">%</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="input-with-unit">
+                      <input type="number" name="interim1_growth_factor" id="btyFactorInterim1" class="field-input bty-input readonly-input" readonly placeholder="e.g. dummy value"/>
+                      <span class="unit-badge">%</span>
+                    </div>
+                  </td>
+                  <td><input type="text" name="interim1_source" class="field-input bty-input bty-source" placeholder="Source"/></td>
+                </tr>
+                <tr class="bty-row">
+                  <td class="bty-label">Interim Year 2</td>
+                  <td><input type="number" name="interim2" class="field-input bty-input" value="2040" min="2025" max="2060" placeholder="e.g. dummy value"/></td>
+                  <td>
+                    <div class="input-with-unit">
+                      <input type="number" name="interim2_pop_growth" class="field-input bty-input bty-pop-rate" data-row="interim2" value="00.00" min="0" max="20" step="0.01" placeholder="e.g. dummy value"/>
+                      <span class="unit-badge">%</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="input-with-unit">
+                      <input type="number" name="interim2_gdp_growth" class="field-input bty-input bty-gdp-rate" data-row="interim2" value="00.00" min="0" max="30" step="0.01" placeholder="e.g. dummy value"/>
+                      <span class="unit-badge">%</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="input-with-unit">
+                      <input type="number" name="interim2_growth_factor" id="btyFactorInterim2" class="field-input bty-input readonly-input" readonly placeholder="e.g. dummy value"/>
+                      <span class="unit-badge">%</span>
+                    </div>
+                  </td>
+                  <td><input type="text" name="interim2_source" class="field-input bty-input bty-source" placeholder="Source"/></td>
+                </tr>
+                <tr class="bty-row">
+                  <td class="bty-label">Target Year</td>
+                  <td><input type="number" name="target_year" class="field-input bty-input" value="2050" min="2030" max="2070" placeholder="e.g. dummy value"/></td>
+                  <td>
+                    <div class="input-with-unit">
+                      <input type="number" name="target_pop_growth" class="field-input bty-input bty-pop-rate" data-row="target" value="00.00" min="0" max="20" step="0.01" placeholder="e.g. dummy value"/>
+                      <span class="unit-badge">%</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="input-with-unit">
+                      <input type="number" name="target_gdp_growth" class="field-input bty-input bty-gdp-rate" data-row="target" value="00.00" min="0" max="30" step="0.01" placeholder="e.g. dummy value"/>
+                      <span class="unit-badge">%</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="input-with-unit">
+                      <input type="number" name="target_growth_factor" id="btyFactorTarget" class="field-input bty-input readonly-input" readonly placeholder="e.g. dummy value"/>
+                      <span class="unit-badge">%</span>
+                    </div>
+                  </td>
+                  <td><input type="text" name="target_source" class="field-input bty-input bty-source" placeholder="Source"/></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="bty-note">
+            <strong>Growth Factor (%)</strong> = (1 + Pop Rate/100) × (1 + GDP Rate/100) − 1 × 100. Used for BAU projections per period.
+          </p>
+        </div>
+ 
+        <!-- ── Floor Space table (feeds Energy & Buildings) ── -->
+        <div class="bty-table-wrap" style="margin-top:24px">
+          <div class="bty-table-title">Floor Space</div>
+          <div class="bty-table-scroll">
+            <table class="bty-table" id="floorSpaceTable">
+              <thead>
+                <tr>
+                  <th>Floor Space</th>
+                  <th>Sq.M</th>
+                  <th>Source</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td class="bty-label">Residential</td>
+                    <td><input type="number" name="fs_res" id="fsRes" class="field-input bty-input" placeholder="e.g. 789" min="0" step="any"/></td>
+                    <td><input type="text" name="fs_res_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                <tr><td class="bty-label">Commercial (12 hrs)</td>
+                    <td><input type="number" name="fs_com" id="fsCom" class="field-input bty-input" placeholder="e.g. 243" min="0" step="any"/></td>
+                    <td><input type="text" name="fs_com_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                <tr><td class="bty-label">Institutional</td>
+                    <td><input type="number" name="fs_ins" id="fsIns" class="field-input bty-input" placeholder="e.g. 3000" min="0" step="any"/></td>
+                    <td><input type="text" name="fs_ins_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                <tr><td class="bty-label">Manufacturing Industries</td>
+                    <td><input type="number" name="fs_mfg" id="fsMfg" class="field-input bty-input" placeholder="e.g. 222" min="0" step="any"/></td>
+                    <td><input type="text" name="fs_mfg_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="bty-note">
+            Floor space values flow automatically into the matching tabs in <em>Energy &amp; Buildings</em>.
+          </p>
+        </div>
+ 
+      </div>
+ 
+      <!-- ══════════════ SECTION 1: Energy &amp; Buildings ══════════════ -->
+      <div class="form-section" data-section="1">
+        <div class="section-header">
+          <div class="section-number">02</div>
+          <div><h2 class="section-title">Energy &amp; Buildings</h2></div>
+        </div>
+
+        <div class="subsection-tabs">
+          <button type="button" class="sub-tab active" data-sub="res">Residential</button>
+          <button type="button" class="sub-tab" data-sub="com">Commercial</button>
+          <button type="button" class="sub-tab" data-sub="ins">Institutional</button>
+          <button type="button" class="sub-tab" data-sub="mfg">Manufacturing &amp; Construction</button>
+          <button type="button" class="sub-tab" data-sub="eind">Energy Industries</button>
+          <button type="button" class="sub-tab" data-sub="fug">Fugitive Emissions</button>
+          <button type="button" class="sub-tab" data-sub="ren">Renewables</button>
+        </div>
+
+        <!-- RESIDENTIAL: 7 fuels from EF sheet, bty-table style, floor area auto-fill -->
+        <div class="sub-panel active" id="sub-res">
+          <div class="panel-hint">🏠 Residential building fuel consumption. 7 fuels from the Emission Factor sheet.</div>
+          <div id="resHost"></div>
+        </div>
+
+        <!-- COMMERCIAL: same 7 fuels -->
+        <div class="sub-panel" id="sub-com">
+          <div class="panel-hint">🏢 Commercial building fuel consumption.</div>
+          <div id="comHost"></div>
+        </div>
+
+        <!-- INSTITUTIONAL: same 7 fuels -->
+        <div class="sub-panel" id="sub-ins">
+          <div class="panel-hint">🏛️ Institutional buildings &amp; public utilities (STP, WTP, street lighting).</div>
+          <div id="insHost"></div>
+        </div>
+
+        <!-- MANUFACTURING: 31 fuels, sub-category + capacity(t) + value -->
+        <div class="sub-panel" id="sub-mfg">
+          <div class="panel-hint">🏭 Manufacturing &amp; Construction — one row per sub-category × fuel.</div>
+          <div id="mfgRowsHost"></div>
+        </div>
+
+        <!-- ENERGY INDUSTRIES: 31 fuels, sub-category + capacity(MW) + value -->
+        <div class="sub-panel" id="sub-eind">
+          <div class="panel-hint">⚡ Energy Industries — electricity generation, refining, heat plants, etc.</div>
+          <div id="eindRowsHost"></div>
+        </div>
+
+        <!-- FUGITIVE EMISSIONS: Mining (5 sectors) + Solid Fuels (22 sectors), unit auto-fills -->
+        <div class="sub-panel" id="sub-fug">
+          <div class="panel-hint">⚠️ Fugitive emissions from mining and oil/gas operations.</div>
+          <div id="fugRowsHost"></div>
+        </div>
+
+        <!-- RENEWABLES: Solar / Wind / Hybrid / Waste to Energy -->
+        <div class="sub-panel" id="sub-ren">
+          <div class="panel-hint">🌞 Renewable energy generated within the city boundary (MWh).</div>
+          <div id="renRowsHost"></div>
+        </div>
+
+      </div>
+
+      <!-- ══════════════ SECTION 2: Electricity Generation ══════════════ -->
+      <div class="form-section" data-section="2">
+        <div class="section-header">
+          <div class="section-number">03</div>
+          <div><h2 class="section-title">Electricity Generation</h2></div>
+        </div>
+        <div class="panel-hint" style="margin-bottom:16px">
+          🔋 Local electricity generation within the city boundary.
+          Group rows: RENEWABLE MIX / NUCLEAR / GAS / SOLID WASTE / COAL.
+          TOTAL row calculates automatically.
+        </div>
+        <div id="elecGenHost"></div>
+      </div>
+
+      <!-- ══════════════ SECTION 3: Transport ══════════════ -->
+      <div class="form-section" data-section="3">
+        <div class="section-header">
+          <div class="section-number">04</div>
+          <div>
+            <h2 class="section-title">Transport</h2>
+            <p class="section-desc">On-road, rail, water &amp; aviation fuel consumption</p>
+          </div>
+        </div>
+ 
+        <!-- ── Data Approach Toggle (BELONGS HERE in Section 2, not Section 0) ── -->
+        <div class="field-group full" style="margin-bottom:20px;">
+          <label class="field-label">Transportation Data Approach</label>
+          <div class="subsection-tabs" style="max-width:360px; margin-top:6px;">
+            <button type="button" class="sub-tab active" data-trans="1">Fuel Sales Approach</button>
+            <button type="button" class="sub-tab" data-trans="2">VKT Approach</button>
+          </div>
+          <input type="hidden" name="trans_option" id="transOption" value="1"/>
+        </div>
+ 
+        <!-- ── Mode Tabs (shared for both approaches) ── -->
+        <div class="subsection-tabs" id="transport-mode-tabs">
+          <button type="button" class="sub-tab active" data-sub="road">On Road</button>
+          <button type="button" class="sub-tab" data-sub="rail">Railway</button>
+          <button type="button" class="sub-tab" data-sub="water">Water</button>
+          <button type="button" class="sub-tab" data-sub="avia">Aviation</button>
+        </div>
+ 
+        <!-- ════ FUEL SALES PANEL (Option 1 — default visible) ════ -->
+        <div id="trans-fuel-panel">
+ 
+          <div class="sub-panel active" id="sub-road">
+            <p class="panel-hint">🚗 Enter total annual fuel volumes for all on-road vehicles combined</p>
+            <div class="field-grid">
+              <div class="field-group">
+                <label class="field-label">Petrol (kL/yr)</label>
+                <input type="number" name="t_pet" class="field-input" placeholder="e.g. 50000"/>
+              </div>
+              <div class="field-group">
+                <label class="field-label">Diesel (kL/yr)</label>
+                <input type="number" name="t_die" class="field-input" placeholder="e.g. 80000"/>
+              </div>
+              <div class="field-group">
+                <label class="field-label">Auto LPG (tonnes/yr)</label>
+                <input type="number" name="t_alpg" class="field-input" placeholder="e.g. 500"/>
+              </div>
+              <div class="field-group">
+                <label class="field-label">CNG (tonnes/yr)</label>
+                <input type="number" name="t_cng" class="field-input" placeholder="e.g. 2000"/>
+              </div>
+              <div class="field-group">
+                <label class="field-label">EV Electricity (MWh/yr)</label>
+                <input type="number" name="t_elec" class="field-input" placeholder="e.g. 500"/>
+              </div>
+              <div class="field-group">
+                <label class="field-label">LNG (tonnes/yr)</label>
+                <input type="number" name="t_lng" class="field-input" placeholder="e.g. 0"/>
+              </div>
+              <div class="field-group">
+                <label class="field-label">Hydrogen (kg/yr)</label>
+                <input type="number" name="t_h2" class="field-input" placeholder="e.g. 0"/>
+              </div>
+              <div class="field-group">
+                <label class="field-label">Lubricants (kL/yr)</label>
+                <input type="number" name="t_lub" class="field-input" placeholder="e.g. 0"/>
+              </div>
+            </div>
+          </div>
+ 
+          <div class="sub-panel" id="sub-rail">
+            <div class="field-grid">
+              <div class="field-group">
+                <label class="field-label">Diesel (kL/yr)</label>
+                <input type="number" name="r_die" class="field-input" placeholder="e.g. 5000"/>
+              </div>
+              <div class="field-group">
+                <label class="field-label">Electricity (MWh/yr)</label>
+                <input type="number" name="r_elec" class="field-input" placeholder="e.g. 2000"/>
+              </div>
+            </div>
+          </div>
+ 
+          <div class="sub-panel" id="sub-water">
+            <div class="field-grid">
+              <div class="field-group">
+                <label class="field-label">Petrol (kL/yr)</label>
+                <input type="number" name="w_pet" class="field-input" placeholder="e.g. 0"/>
+              </div>
+              <div class="field-group">
+                <label class="field-label">Diesel (kL/yr)</label>
+                <input type="number" name="w_die" class="field-input" placeholder="e.g. 0"/>
+              </div>
+            </div>
+          </div>
+ 
+          <div class="sub-panel" id="sub-avia">
+            <div class="field-grid">
+              <div class="field-group">
+                <label class="field-label">Aviation Gasoline (kL/yr)</label>
+                <input type="number" name="av_gas" class="field-input" placeholder="e.g. 0"/>
+              </div>
+              <div class="field-group">
+                <label class="field-label">Jet Kerosene (kL/yr)</label>
+                <input type="number" name="av_jet" class="field-input" placeholder="e.g. 0"/>
+              </div>
+            </div>
+          </div>
+ 
+        </div><!-- end trans-fuel-panel -->
+ 
+        <!-- ════ VKT PANEL (Option 2 — hidden by default) ════ -->
+        <div id="trans-vkt-panel" style="display:none;">
+          <p class="panel-hint">🚌 Enter number of vehicles and annual km per vehicle — all on-road modes</p>
+          <div class="field-grid">
+            <div class="field-group">
+              <label class="field-label">Motorcycles — Count</label>
+              <input type="number" name="vkt_motorcycle_count" class="field-input" placeholder="e.g. 25000"/>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Motorcycles — km/yr per vehicle</label>
+              <input type="number" name="vkt_motorcycle_km" class="field-input" placeholder="e.g. 8000"/>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Cars / Autos — Count</label>
+              <input type="number" name="vkt_car_count" class="field-input" placeholder="e.g. 5000"/>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Cars / Autos — km/yr per vehicle</label>
+              <input type="number" name="vkt_car_km" class="field-input" placeholder="e.g. 12000"/>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Taxi — Count</label>
+              <input type="number" name="vkt_taxi_count" class="field-input" placeholder="e.g. 2000"/>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Taxi — km/yr per vehicle</label>
+              <input type="number" name="vkt_taxi_km" class="field-input" placeholder="e.g. 50000"/>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Buses — Count</label>
+              <input type="number" name="vkt_bus_count" class="field-input" placeholder="e.g. 500"/>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Buses — km/yr per vehicle</label>
+              <input type="number" name="vkt_bus_km" class="field-input" placeholder="e.g. 40000"/>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Heavy Duty Trucks — Count</label>
+              <input type="number" name="vkt_hdtruck_count" class="field-input" placeholder="e.g. 200"/>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Heavy Duty Trucks — km/yr per vehicle</label>
+              <input type="number" name="vkt_hdtruck_km" class="field-input" placeholder="e.g. 60000"/>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Railway Electricity (MWh/yr)</label>
+              <input type="number" name="r_elec" class="field-input" placeholder="e.g. 2000"/>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Aviation Gasoline (kL/yr)</label>
+              <input type="number" name="av_gas" class="field-input" placeholder="e.g. 0"/>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Jet Kerosene (kL/yr)</label>
+              <input type="number" name="av_jet" class="field-input" placeholder="e.g. 0"/>
+            </div>
+          </div>
+        </div><!-- end trans-vkt-panel -->
+ 
+      </div><!-- end Section 2 -->
+ 
+      <!-- ══════════════ SECTION 4: WASTE & WASTEWATER ══════════════ -->
+      <div class="form-section" data-section="4">
+        <div class="section-header">
+          <div class="section-number">05</div>
+          <div>
+            <h2 class="section-title">Waste &amp; Wastewater</h2>
+          </div>
+        </div>
+
+        <div class="subsection-tabs">
+          <button type="button" class="sub-tab active" data-sub="sw">Solid Waste</button>
+          <button type="button" class="sub-tab" data-sub="ww">Wastewater</button>
+        </div>
+
+        <!-- ── SOLID WASTE ── -->
+        <div class="sub-panel active" id="sub-sw">
+
+          <!-- E1: Generation -->
+          <div class="bty-table-wrap">
+            <div class="bty-table-title">E1. Solid Waste Generation</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead><tr><th>Data Item</th><th>Value</th><th>Unit</th><th>Source</th></tr></thead>
+                <tbody>
+                  <tr><td class="bty-label">Solid Waste Generation</td>
+                    <td><input type="number" name="sw_tot" class="field-input bty-input" placeholder="0" step="0.1" min="0"/></td>
+                    <td><span style="padding:0 8px;font-size:0.8rem;color:#7a8ba8">TPD</span></td>
+                    <td><input type="text" name="sw_tot_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- E2: Composition + E3: Organic Waste (side-by-side) -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+            <div class="bty-table-wrap" style="margin:0">
+              <div class="bty-table-title">E2. Solid Waste Composition</div>
+              <div class="bty-table-scroll">
+                <table class="bty-table">
+                  <thead><tr><th>Waste Type</th><th>Value (TPD)</th><th>%</th><th>Source</th></tr></thead>
+                  <tbody>
+                    <tr><td class="bty-label">Paper/Cardboard</td>
+                      <td><input type="number" name="sw_paper_tpd" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="number" name="sw_paper_pct" class="field-input bty-input" placeholder="%" step="0.1" min="0" max="100"/></td>
+                      <td><input type="text" name="sw_paper_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Textiles</td>
+                      <td><input type="number" name="sw_textiles_tpd" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="number" name="sw_textiles_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                      <td><input type="text" name="sw_textiles_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Wet Waste</td>
+                      <td><input type="number" name="sw_wet_tpd" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="number" name="sw_wet_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                      <td><input type="text" name="sw_wet_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Food Waste</td>
+                      <td><input type="number" name="sw_food_tpd" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="number" name="sw_food_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                      <td><input type="text" name="sw_food_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Garden/Organic Waste</td>
+                      <td><input type="number" name="sw_garden_tpd" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="number" name="sw_garden_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                      <td><input type="text" name="sw_garden_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Wood</td>
+                      <td><input type="number" name="sw_wood_tpd" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="number" name="sw_wood_pct" class="field-input bty-input" value="0.2" step="0.1"/></td>
+                      <td><input type="text" name="sw_wood_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Rubber and Leather</td>
+                      <td><input type="number" name="sw_rubber_tpd" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="number" name="sw_rubber_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                      <td><input type="text" name="sw_rubber_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Plastics</td>
+                      <td><input type="number" name="sw_plastics_tpd" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="number" name="sw_plastics_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                      <td><input type="text" name="sw_plastics_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Metal</td>
+                      <td><input type="number" name="sw_metal_tpd" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="number" name="sw_metal_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                      <td><input type="text" name="sw_metal_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Glass</td>
+                      <td><input type="number" name="sw_glass_tpd" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="number" name="sw_glass_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                      <td><input type="text" name="sw_glass_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Other / Inert Waste</td>
+                      <td><input type="number" name="sw_other_tpd" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="number" name="sw_other_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                      <td><input type="text" name="sw_other_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr class="subtotal-row"><td class="bty-label" style="font-weight:700">Total (TPD)</td>
+                      <td id="swCompTotal" style="padding:6px 8px;font-size:0.8rem;color:#1a2744;font-weight:700">0</td>
+                      <td id="swCompTotalPct" style="padding:6px 8px;font-size:0.8rem;color:#1a2744;font-weight:700">0%</td>
+                      <td></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="bty-table-wrap" style="margin:0">
+              <div class="bty-table-title">E3. Organic Waste Composition</div>
+              <div class="bty-table-scroll">
+                <table class="bty-table">
+                  <thead><tr><th>Waste Type</th><th>Tonnes/Year</th><th>%</th><th>Source</th></tr></thead>
+                  <tbody>
+                    <tr><td class="bty-label">Organic (Wet) Waste</td>
+                      <td><input type="number" name="sw_org_wet_tpa" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="number" name="sw_org_wet_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                      <td><input type="text" name="sw_org_wet_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Dry Waste</td>
+                      <td><input type="number" name="sw_org_dry_tpa" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="number" name="sw_org_dry_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                      <td><input type="text" name="sw_org_dry_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Total Solid Waste</td>
+                      <td><input type="number" name="sw_org_total_tpa" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="number" name="sw_org_total_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                      <td><input type="text" name="sw_org_total_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="bty-table-title" style="margin-top:10px">Proportion of Waste by Source</div>
+              <div class="bty-table-scroll">
+                <table class="bty-table">
+                  <thead><tr><th>Waste Source</th><th>Value (%)</th><th>Source</th></tr></thead>
+                  <tbody>
+                    <tr><td class="bty-label">Residential Proportion</td>
+                      <td><input type="number" name="sw_res_prop_pct" class="field-input bty-input" placeholder="%" step="0.1" min="0" max="100"/></td>
+                      <td><input type="text" name="sw_res_prop_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Commercial Proportion</td>
+                      <td><input type="number" name="sw_com_prop_pct" class="field-input bty-input" value="1" step="0.1" min="0" max="100"/></td>
+                      <td><input type="text" name="sw_com_prop_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Treatment Process table -->
+          <div class="bty-table-wrap" style="margin-top:14px">
+            <div class="bty-table-title">Solid Waste Treatment Process</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead>
+                  <tr>
+                    <th>Waste Type</th>
+                    <th>Recycle (tpa)</th>
+                    <th>Landfill (tpa)</th>
+                    <th>Composting (tpa)</th>
+                    <th>Anaerobic Digestion (tpa)</th>
+                    <th>Incineration (tpa)</th>
+                    <th>Open Burning (tpa)</th>
+                    <th>Open Dumping (tpa)</th>
+                    <th>Total Waste (tpa)</th>
+                    <th>Source</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td class="bty-label">Paper/Cardboard</td>
+                    <td><input type="number" name="swt_paper_recycle" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_paper_landfill" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_paper_compost" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_paper_ad" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_paper_incin" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_paper_burn" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_paper_dump" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_paper_total" class="field-input bty-input" placeholder="0" step="any" readonly/></td>
+                    <td><input type="text" name="swt_paper_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Textiles</td>
+                    <td><input type="number" name="swt_textiles_recycle" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_textiles_landfill" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_textiles_compost" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_textiles_ad" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_textiles_incin" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_textiles_burn" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_textiles_dump" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_textiles_total" class="field-input bty-input" placeholder="0" step="any" readonly/></td>
+                    <td><input type="text" name="swt_textiles_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Food Waste</td>
+                    <td><input type="number" name="swt_food_recycle" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_food_landfill" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_food_compost" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_food_ad" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_food_incin" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_food_burn" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_food_dump" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_food_total" class="field-input bty-input" placeholder="0" step="any" readonly/></td>
+                    <td><input type="text" name="swt_food_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Garden Waste</td>
+                    <td><input type="number" name="swt_garden_recycle" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_garden_landfill" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_garden_compost" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_garden_ad" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_garden_incin" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_garden_burn" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_garden_dump" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_garden_total" class="field-input bty-input" placeholder="0" step="any" readonly/></td>
+                    <td><input type="text" name="swt_garden_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Wood</td>
+                    <td><input type="number" name="swt_wood_recycle" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_wood_landfill" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_wood_compost" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_wood_ad" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_wood_incin" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_wood_burn" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_wood_dump" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_wood_total" class="field-input bty-input" placeholder="0" step="any" readonly/></td>
+                    <td><input type="text" name="swt_wood_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Rubber &amp; Leather</td>
+                    <td><input type="number" name="swt_rubber_recycle" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_rubber_landfill" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_rubber_compost" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_rubber_ad" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_rubber_incin" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_rubber_burn" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_rubber_dump" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_rubber_total" class="field-input bty-input" placeholder="0" step="any" readonly/></td>
+                    <td><input type="text" name="swt_rubber_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Plastics</td>
+                    <td><input type="number" name="swt_plastics_recycle" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_plastics_landfill" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_plastics_compost" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_plastics_ad" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_plastics_incin" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_plastics_burn" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_plastics_dump" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_plastics_total" class="field-input bty-input" placeholder="0" step="any" readonly/></td>
+                    <td><input type="text" name="swt_plastics_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Metal</td>
+                    <td><input type="number" name="swt_metal_recycle" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_metal_landfill" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_metal_compost" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_metal_ad" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_metal_incin" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_metal_burn" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_metal_dump" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_metal_total" class="field-input bty-input" placeholder="0" step="any" readonly/></td>
+                    <td><input type="text" name="swt_metal_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Glass</td>
+                    <td><input type="number" name="swt_glass_recycle" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_glass_landfill" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_glass_compost" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_glass_ad" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_glass_incin" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_glass_burn" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_glass_dump" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_glass_total" class="field-input bty-input" placeholder="0" step="any" readonly/></td>
+                    <td><input type="text" name="swt_glass_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Other / Inert Waste</td>
+                    <td><input type="number" name="swt_other_recycle" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_other_landfill" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_other_compost" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_other_ad" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_other_incin" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_other_burn" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_other_dump" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="swt_other_total" class="field-input bty-input" placeholder="0" step="any" readonly/></td>
+                    <td><input type="text" name="swt_other_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr class="subtotal-row"><td class="bty-label" style="font-weight:700">Total</td>
+                    <td id="swtRecycleTotal">0</td><td id="swtLandfillTotal">0</td>
+                    <td id="swtCompostTotal">0</td><td id="swtAdTotal">0</td>
+                    <td id="swtIncinTotal">0</td><td id="swtBurnTotal">0</td>
+                    <td id="swtDumpTotal">0</td><td id="swtGrandTotal">0</td><td></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Biological Treatment & Incineration details (side-by-side) -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+            <div class="bty-table-wrap" style="margin:0">
+              <div class="bty-table-title">Biological Treatment</div>
+              <div class="bty-table-scroll">
+                <table class="bty-table">
+                  <thead><tr><th>Treatment Type</th><th>tCH₄ Recovered</th><th>Source</th></tr></thead>
+                  <tbody>
+                    <tr><td class="bty-label">Composting</td>
+                      <td><input type="number" name="sw_bio_compost_ch4" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="sw_bio_compost_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Anaerobic Digestion</td>
+                      <td><input type="number" name="sw_bio_ad_ch4" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="sw_bio_ad_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="bty-table-wrap" style="margin:0">
+              <div class="bty-table-title">Incineration Details</div>
+              <div class="bty-table-scroll">
+                <table class="bty-table">
+                  <thead><tr><th>Data Item</th><th>Value</th><th>Source</th></tr></thead>
+                  <tbody>
+                    <tr><td class="bty-label">Technology of incinerator</td>
+                      <td><input type="text" name="sw_incin_tech" class="field-input bty-input" placeholder="e.g. Mass burn"/></td>
+                      <td><input type="text" name="sw_incin_tech_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Type of Landfill Site</td>
+                      <td><select name="sw_landfill_type" class="field-input bty-input">
+                        <option value="">— select —</option>
+                        <option>Managed anaerobic</option>
+                        <option>Managed semi-aerobic</option>
+                        <option>Unmanaged deep (>5m)</option>
+                        <option>Unmanaged shallow</option>
+                        <option>Uncategorised</option>
+                      </select></td>
+                      <td><input type="text" name="sw_landfill_type_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Landfill Collection System</td>
+                      <td><input type="text" name="sw_landfill_collect" class="field-input bty-input" placeholder="e.g. Passive"/></td>
+                      <td><input type="text" name="sw_landfill_collect_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Methane Collection Efficiency (%)</td>
+                      <td><input type="number" name="sw_ch4_eff_pct" class="field-input bty-input" placeholder="%" step="0.1" min="0" max="100"/></td>
+                      <td><input type="text" name="sw_ch4_eff_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Landfill Gas used as Energy (%)</td>
+                      <td><input type="number" name="sw_lfg_energy_pct" class="field-input bty-input" placeholder="%" step="0.1" min="0" max="100"/></td>
+                      <td><input type="text" name="sw_lfg_energy_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- E7 Saturation + Transport Fleet (side-by-side) -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+            <div class="bty-table-wrap" style="margin:0">
+              <div class="bty-table-title">E7. Solid Waste Collection Service Saturation</div>
+              <div class="bty-table-scroll">
+                <table class="bty-table">
+                  <thead><tr><th>Data Item</th><th>Value (%)</th><th>Source</th></tr></thead>
+                  <tbody>
+                    <tr><td class="bty-label">Proportion of Residents with Waste Collection</td>
+                      <td><input type="number" name="sw_collection_pct" class="field-input bty-input" placeholder="%" step="0.1" min="0" max="100"/></td>
+                      <td><input type="text" name="sw_collection_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="bty-table-wrap" style="margin:0">
+              <div class="bty-table-title">Waste Transport Fleet</div>
+              <div class="bty-table-scroll">
+                <table class="bty-table">
+                  <thead><tr><th>Data Item</th><th>Diesel</th><th>CNG</th><th>Electricity</th><th>Source</th></tr></thead>
+                  <tbody>
+                    <tr><td class="bty-label">No. of Vehicles</td>
+                      <td><input type="number" name="sw_fleet_diesel_n" class="field-input bty-input" placeholder="0"/></td>
+                      <td><input type="number" name="sw_fleet_cng_n" class="field-input bty-input" placeholder="0"/></td>
+                      <td><input type="number" name="sw_fleet_elec_n" class="field-input bty-input" placeholder="0"/></td>
+                      <td><input type="text" name="sw_fleet_n_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Truck Travel (km/year)</td>
+                      <td><input type="number" name="sw_fleet_diesel_km" class="field-input bty-input" placeholder="0"/></td>
+                      <td><input type="number" name="sw_fleet_cng_km" class="field-input bty-input" placeholder="0"/></td>
+                      <td><input type="number" name="sw_fleet_elec_km" class="field-input bty-input" placeholder="0"/></td>
+                      <td><input type="text" name="sw_fleet_km_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Fuel Efficiency (Fuel/km)</td>
+                      <td><input type="number" name="sw_fleet_diesel_eff" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="number" name="sw_fleet_cng_eff" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="number" name="sw_fleet_elec_eff" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="sw_fleet_eff_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div><!-- end sub-sw -->
+
+        <!-- ── WASTEWATER ── -->
+        <div class="sub-panel" id="sub-ww">
+
+          <!-- Basic details -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div class="bty-table-wrap" style="margin:0">
+              <div class="bty-table-title">Basic Wastewater Details</div>
+              <div class="bty-table-scroll">
+                <table class="bty-table">
+                  <thead><tr><th>Data Item</th><th>Base Year</th><th>Source</th></tr></thead>
+                  <tbody>
+                    <tr><td class="bty-label">Water Supply (LPCD)</td>
+                      <td><input type="number" name="ww_lpcd" class="field-input bty-input" value="135" min="0" step="any"/></td>
+                      <td><input type="text" name="ww_lpcd_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Water Consumption (MLD)</td>
+                      <td><input type="number" name="ww_consumption_mld" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="ww_consumption_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Wastewater Generation (MLD)</td>
+                      <td><input type="number" name="ww_gen_mld" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="ww_gen_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Wastewater Collection (%)</td>
+                      <td><input type="number" name="ww_collection_pct" class="field-input bty-input" placeholder="%" step="0.1" min="0" max="100"/></td>
+                      <td><input type="text" name="ww_collection_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr class="subtotal-row"><td class="bty-label" style="font-weight:700">Wastewater Collected (MLD)</td>
+                      <td><input type="number" name="ww_collected_mld" class="field-input bty-input" placeholder="0" step="any" readonly/></td>
+                      <td></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="bty-table-wrap" style="margin:0">
+              <div class="bty-table-title">Population-Based WW Generation Estimate</div>
+              <div class="bty-table-scroll">
+                <table class="bty-table">
+                  <thead><tr><th>Parameter</th><th>Value</th><th>Source</th></tr></thead>
+                  <tbody>
+                    <tr><td class="bty-label">Wastewater Generation</td>
+                      <td><input type="number" name="ww_est_gen" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="ww_est_gen_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">BOD (g/person/day)</td>
+                      <td><input type="number" name="ww_bod" class="field-input bty-input" value="34" step="0.1"/></td>
+                      <td><input type="text" name="ww_bod_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Nitrogen (kg/person/day)</td>
+                      <td><input type="number" name="ww_nitrogen" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="ww_nitrogen_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Energy Consumption by Treatment Type -->
+          <div class="bty-table-wrap" style="margin-top:14px">
+            <div class="bty-table-title">Wastewater Energy Consumption by Treatment Type</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead><tr><th>Treatment Type</th><th>Energy Consumption (MWh/yr)</th><th>Source</th></tr></thead>
+                <tbody>
+                  <tr><td class="bty-label">Centralised aerobic WWTP</td>
+                    <td><input type="number" name="ww_e_aerobic" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ww_e_aerobic_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Aerobic shallow ponds</td>
+                    <td><input type="number" name="ww_e_pond" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ww_e_pond_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Anaerobic lagoons</td>
+                    <td><input type="number" name="ww_e_an_lagoon" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ww_e_an_lagoon_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Facultative lagoons</td>
+                    <td><input type="number" name="ww_e_fac_lagoon" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ww_e_fac_lagoon_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Constructed wetlands</td>
+                    <td><input type="number" name="ww_e_wetland" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ww_e_wetland_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Anaerobic reactors (UASB)</td>
+                    <td><input type="number" name="ww_e_uasb" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ww_e_uasb_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Sludge anaerobic treatment</td>
+                    <td><input type="number" name="ww_e_sludge" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ww_e_sludge_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Composting</td>
+                    <td><input type="number" name="ww_e_compost" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ww_e_compost_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Incineration and Open burning</td>
+                    <td><input type="number" name="ww_e_incin" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ww_e_incin_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Septic Tanks (without Dispersion field)</td>
+                    <td><input type="number" name="ww_e_septic" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ww_e_septic_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Septic system (with soil dispersal)</td>
+                    <td><input type="number" name="ww_e_septic2" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ww_e_septic2_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Open pits/Latrines</td>
+                    <td><input type="number" name="ww_e_pit" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ww_e_pit_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Sewer (closed and underground)</td>
+                    <td><input type="number" name="ww_e_sewer_closed" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ww_e_sewer_closed_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Sewer (open)</td>
+                    <td><input type="number" name="ww_e_sewer_open" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ww_e_sewer_open_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr class="subtotal-row"><td class="bty-label" style="font-weight:700">Total</td>
+                    <td><input type="number" name="ww_e_total" class="field-input bty-input" placeholder="0" step="any" readonly/></td>
+                    <td></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Treatment Distribution -->
+          <div class="bty-table-wrap" style="margin-top:14px">
+            <div class="bty-table-title">Types of Treatment and Disposal</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead>
+                  <tr><th>System</th><th>Status</th><th>Type of Treatment</th><th>Technology</th>
+                      <th>WW Treatment Value %</th><th>Population Value</th><th>Source</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td class="bty-label" rowspan="9">Collected</td><td class="bty-label" rowspan="8">Treated</td>
+                    <td rowspan="2">Aerobic</td><td>Centralised aerobic WWTP</td>
+                    <td><input type="number" name="wwtd_aerobic1_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="number" name="wwtd_aerobic1_pop" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="wwtd_aerobic1_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>Aerobic shallow ponds</td>
+                    <td><input type="number" name="wwtd_aerobic2_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="number" name="wwtd_aerobic2_pop" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="wwtd_aerobic2_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td rowspan="3">Anaerobic</td><td>Anaerobic lagoons</td>
+                    <td><input type="number" name="wwtd_an1_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="number" name="wwtd_an1_pop" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="wwtd_an1_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>Facultative lagoons</td>
+                    <td><input type="number" name="wwtd_an2_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="number" name="wwtd_an2_pop" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="wwtd_an2_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>Anaerobic reactors</td>
+                    <td><input type="number" name="ww_uasb_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="number" name="wwtd_an3_pop" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="wwtd_an3_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td rowspan="3">Onsite Sludge</td><td>Sludge anaerobic treatment</td>
+                    <td><input type="number" name="wwtd_sludge1_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="number" name="wwtd_sludge1_pop" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="wwtd_sludge1_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>Composting</td>
+                    <td><input type="number" name="wwtd_sludge2_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="number" name="wwtd_sludge2_pop" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="wwtd_sludge2_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>Incineration and Open burning</td>
+                    <td><input type="number" name="wwtd_sludge3_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="number" name="wwtd_sludge3_pop" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="wwtd_sludge3_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td colspan="2">Untreated</td>
+                    <td><input type="number" name="wwtd_untreated_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="number" name="wwtd_untreated_pop" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="wwtd_untreated_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label" rowspan="3">Uncollected</td><td colspan="2">Septic Tanks (without Dispersion)</td>
+                    <td><input type="number" name="wwtd_sep1_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="number" name="wwtd_sep1_pop" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="wwtd_sep1_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td colspan="2">Septic system (with dispersal)</td>
+                    <td><input type="number" name="wwtd_sep2_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="number" name="wwtd_sep2_pop" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="wwtd_sep2_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td colspan="2">Open pits/Latrines</td>
+                    <td><input type="number" name="ww_open_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="number" name="wwtd_pit_pop" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="wwtd_pit_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label" colspan="2">Discharge from system</td><td>Freshwater / marine discharge</td>
+                    <td><input type="number" name="wwtd_dis1_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="number" name="wwtd_dis1_pop" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="wwtd_dis1_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td colspan="2"></td><td>Non-aquatic (soils)</td>
+                    <td><input type="number" name="wwtd_dis2_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="number" name="wwtd_dis2_pop" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="wwtd_dis2_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td colspan="2"></td><td>River discharge</td>
+                    <td><input type="number" name="wwtd_dis3_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="number" name="wwtd_dis3_pop" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="wwtd_dis3_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td colspan="2"></td><td>Sewer (closed)</td>
+                    <td><input type="number" name="wwtd_dis4_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="number" name="wwtd_dis4_pop" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="wwtd_dis4_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td colspan="2"></td><td>Sewer (open)</td>
+                    <td><input type="number" name="wwtd_dis5_pct" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="number" name="wwtd_dis5_pop" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="wwtd_dis5_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- end sub-ww -->
+      </div><!-- end section 3 -->
+
+      <!-- ══════════════ SECTION 5: AFOLU ══════════════ -->
+      <div class="form-section" data-section="5">
+        <div class="section-header">
+          <div class="section-number">06</div>
+          <div>
+            <h2 class="section-title">Agriculture, Forestry &amp; Land Use (AFOLU)</h2>
+          </div>
+        </div>
+
+        <div class="subsection-tabs">
+          <button type="button" class="sub-tab active" data-sub="afolu-live">Livestock</button>
+          <button type="button" class="sub-tab" data-sub="afolu-forest">Urban Forestry</button>
+          <button type="button" class="sub-tab" data-sub="afolu-land">Land Use Change</button>
+          <button type="button" class="sub-tab" data-sub="afolu-crop">Cropland &amp; Biomass</button>
+          <button type="button" class="sub-tab" data-sub="afolu-fert">Fertilizer</button>
+        </div>
+
+        <!-- LIVESTOCK & MANURE MANAGEMENT -->
+        <div class="sub-panel active" id="sub-afolu-live">
+          <div class="bty-table-wrap">
+            <div class="bty-table-title">Enteric Fermentation &amp; Manure Management — All Livestock</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead><tr><th>Animal Type</th><th>Sub-type</th><th>Number of Animals (Heads)</th><th>Source</th></tr></thead>
+                <tbody>
+                  <tr><td class="bty-label" rowspan="4">Cattle Indigenous</td><td>Dairy Cow</td>
+                    <td><input type="number" name="live_ind_dairy" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="live_ind_dairy_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>Non-Dairy 0–1 Year</td>
+                    <td><input type="number" name="live_ind_nd01" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="live_ind_nd01_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>Non-Dairy 1–3 Year</td>
+                    <td><input type="number" name="live_ind_nd13" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="live_ind_nd13_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>Non-Dairy Adult</td>
+                    <td><input type="number" name="nondairy_cow_adult" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="live_ind_nda_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label" rowspan="4">Cross-Bred Cattle</td><td>Dairy Cow</td>
+                    <td><input type="number" name="dairy_cow_crossbred" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="live_cross_dairy_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>Non-Dairy 0–1 Year</td>
+                    <td><input type="number" name="live_cross_nd01" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="live_cross_nd01_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>Non-Dairy 1–3 Year</td>
+                    <td><input type="number" name="live_cross_nd13" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="live_cross_nd13_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>Non-Dairy Adult</td>
+                    <td><input type="number" name="live_cross_nda" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="live_cross_nda_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label" rowspan="4">Buffalo</td><td>Dairy Buffalo</td>
+                    <td><input type="number" name="dairy_buffalo" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="live_buf_dairy_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>Non-Dairy 0–1 Year</td>
+                    <td><input type="number" name="live_buf_nd01" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="live_buf_nd01_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>Non-Dairy 1–3 Year</td>
+                    <td><input type="number" name="live_buf_nd13" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="live_buf_nd13_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>Non-Dairy Adult</td>
+                    <td><input type="number" name="live_buf_nda" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="live_buf_nda_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label" colspan="1">Sheep</td><td>—</td>
+                    <td><input type="number" name="sheep" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="live_sheep_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Goats</td><td>—</td>
+                    <td><input type="number" name="goat" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="live_goat_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Camels</td><td>—</td>
+                    <td><input type="number" name="live_camel" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="live_camel_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Horses</td><td>—</td>
+                    <td><input type="number" name="live_horse" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="live_horse_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Mules and Asses</td><td>—</td>
+                    <td><input type="number" name="live_mule" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="live_mule_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Swine</td><td>—</td>
+                    <td><input type="number" name="swine" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="live_swine_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Poultry</td><td>—</td>
+                    <td><input type="number" name="poultry" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="live_poultry_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- end sub-afolu-live -->
+
+        <!-- URBAN FORESTRY — 3 toggle buttons as in Excel r339-341 -->
+        <div class="sub-panel" id="sub-afolu-forest">
+          <div class="panel-hint">🌳 Select one method for Urban Forestry carbon estimation.</div>
+          <div class="subsection-tabs" style="margin-bottom:14px">
+            <button type="button" class="sub-tab active" data-sub="uf-opt1" data-uf-tab="1">
+              Option 1: Annual Carbon Accumulation
+            </button>
+            <button type="button" class="sub-tab" data-sub="uf-opt2" data-uf-tab="2">
+              Option 2: Regional Crown Cover
+            </button>
+            <button type="button" class="sub-tab" data-sub="uf-opt3" data-uf-tab="3">
+              Option 3: Individual Woody Plants
+            </button>
+          </div>
+          <input type="hidden" name="urban_forestry_option" id="ufOption" value="1"/>
+
+          <!-- Option 1: Annual Carbon Accumulation -->
+          <div id="sub-uf-opt1" class="sub-panel active">
+            <div class="bty-table-wrap">
+              <div class="bty-table-title">Annual Carbon Accumulation (Biomass Increment)</div>
+              <div class="bty-table-scroll">
+                <table class="bty-table">
+                  <thead><tr><th>Vegetation Type</th><th>tonnes C yr⁻¹</th><th>Source</th></tr></thead>
+                  <tbody>
+                    <tr><td class="bty-label">Trees</td>
+                      <td><input type="number" name="uf_acc_trees" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="uf_acc_trees_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Shrubs</td>
+                      <td><input type="number" name="uf_acc_shrubs" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="uf_acc_shrubs_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Turfgrass</td>
+                      <td><input type="number" name="uf_acc_turfgrass" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="uf_acc_turfgrass_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Garden Plants</td>
+                      <td><input type="number" name="uf_acc_garden" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="uf_acc_garden_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Option 2: Regional Crown Cover -->
+          <div id="sub-uf-opt2" class="sub-panel">
+            <div class="bty-table-wrap">
+              <div class="bty-table-title">Tier 2(a) — Regional Crown Area Method</div>
+              <div class="bty-table-scroll">
+                <table class="bty-table">
+                  <thead><tr><th>Data Item</th><th>Area Cover (ha)</th><th>Source</th></tr></thead>
+                  <tbody>
+                    <tr><td class="bty-label">Total Crown Area Cover</td>
+                      <td><input type="number" name="uf_crown_area_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="uf_crown_area_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Option 3: Individual Woody Plants -->
+          <div id="sub-uf-opt3" class="sub-panel">
+            <div class="bty-table-wrap">
+              <div class="bty-table-title">Individual Woody Plants</div>
+              <div class="bty-table-scroll">
+                <table class="bty-table">
+                  <thead><tr><th>Data Item</th><th>No. of Trees</th><th>Source</th></tr></thead>
+                  <tbody>
+                    <tr><td class="bty-label">Individual Woody Plants</td>
+                      <td><input type="number" name="uf_woody_trees" class="field-input bty-input" placeholder="0"/></td>
+                      <td><input type="text" name="uf_woody_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div><!-- end sub-afolu-forest -->
+
+        <!-- LAND USE CHANGE -->
+        <div class="sub-panel" id="sub-afolu-land">
+          <div class="subsection-tabs" style="margin-bottom:14px">
+            <button type="button" class="sub-tab active" data-sub="lu-forest">Forestland</button>
+            <button type="button" class="sub-tab" data-sub="lu-cropland">Cropland</button>
+            <button type="button" class="sub-tab" data-sub="lu-grassland">Grassland</button>
+            <button type="button" class="sub-tab" data-sub="lu-settlements">Settlements</button>
+            <button type="button" class="sub-tab" data-sub="lu-otherland">Other Land</button>
+            <button type="button" class="sub-tab" data-sub="lu-wetlands">Wetlands</button>
+          </div>
+
+          <!-- Forestland -->
+          <div id="sub-lu-forest" class="sub-panel active">
+            <div class="bty-table-wrap">
+              <div class="bty-table-title">Forestland</div>
+              <div class="bty-table-scroll">
+                <table class="bty-table">
+                  <thead><tr><th>Land Transition</th><th>Area (ha)</th><th>Carbon Stock (t/ha)</th><th>Source</th></tr></thead>
+                  <tbody>
+                    <tr><td class="bty-label">Forestland Remaining Forestland</td>
+                      <td><input type="number" name="lu_forest_remain_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="number" name="lu_forest_remain_cs" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="lu_forest_remain_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cropland -->
+          <div id="sub-lu-cropland" class="sub-panel">
+            <div class="bty-table-wrap">
+              <div class="bty-table-title">Cropland / Agriculture Land</div>
+              <div class="bty-table-scroll">
+                <table class="bty-table">
+                  <thead><tr><th>Land Transition</th><th>Area (ha)</th><th>Source</th></tr></thead>
+                  <tbody>
+                    <tr><td class="bty-label">Agricultural land Remaining Agricultural land</td>
+                      <td><input type="number" name="lu_crop_remain_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="lu_crop_remain_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Forestland → Agricultural land</td>
+                      <td><input type="number" name="lu_forest_to_crop_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="lu_forest_to_crop_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Otherland → Agricultural land</td>
+                      <td><input type="number" name="lu_other_to_crop_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="lu_other_to_crop_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Grassland → Agricultural land</td>
+                      <td><input type="number" name="lu_grass_to_crop_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="lu_grass_to_crop_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Settlements → Agricultural land</td>
+                      <td><input type="number" name="lu_settle_to_crop_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="lu_settle_to_crop_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Wetland → Agricultural land</td>
+                      <td><input type="number" name="lu_wet_to_crop_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="lu_wet_to_crop_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Grassland -->
+          <div id="sub-lu-grassland" class="sub-panel">
+            <div class="bty-table-wrap">
+              <div class="bty-table-title">Grassland</div>
+              <div class="bty-table-scroll">
+                <table class="bty-table">
+                  <thead><tr><th>Land Transition</th><th>Area (ha)</th><th>Source</th></tr></thead>
+                  <tbody>
+                    <tr><td class="bty-label">Grassland Remaining Grassland</td>
+                      <td><input type="number" name="lu_grass_remain_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="lu_grass_remain_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Forestland → Grassland</td>
+                      <td><input type="number" name="lu_forest_to_grass_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="lu_forest_to_grass_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Otherland → Grassland</td>
+                      <td><input type="number" name="lu_other_to_grass_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="lu_other_to_grass_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Agricultural → Grassland</td>
+                      <td><input type="number" name="lu_crop_to_grass_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="lu_crop_to_grass_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Settlements → Grassland</td>
+                      <td><input type="number" name="lu_settle_to_grass_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="lu_settle_to_grass_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Wetland → Grassland</td>
+                      <td><input type="number" name="lu_wet_to_grass_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="lu_wet_to_grass_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Settlements -->
+          <div id="sub-lu-settlements" class="sub-panel">
+            <div class="bty-table-wrap">
+              <div class="bty-table-title">Settlements</div>
+              <div class="bty-table-scroll">
+                <table class="bty-table">
+                  <thead><tr><th>Land Transition</th><th>Area (ha)</th><th>Source</th></tr></thead>
+                  <tbody>
+                    <tr><td class="bty-label">Settlements Remaining Settlements</td>
+                      <td><input type="number" name="lu_settle_remain_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="lu_settle_remain_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Forestland → Settlements</td>
+                      <td><input type="number" name="lu_forest_to_settle_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="lu_forest_to_settle_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Otherland → Settlements</td>
+                      <td><input type="number" name="lu_other_to_settle_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="lu_other_to_settle_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Agricultural → Settlements</td>
+                      <td><input type="number" name="lu_crop_to_settle_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="lu_crop_to_settle_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Grassland → Settlements</td>
+                      <td><input type="number" name="lu_grass_to_settle_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="lu_grass_to_settle_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Wetland → Settlements</td>
+                      <td><input type="number" name="lu_wet_to_settle_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="lu_wet_to_settle_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Other Land -->
+          <div id="sub-lu-otherland" class="sub-panel">
+            <div class="bty-table-wrap">
+              <div class="bty-table-title">Other Land</div>
+              <div class="bty-table-scroll">
+                <table class="bty-table">
+                  <thead><tr><th>Land Transition</th><th>Area (ha)</th><th>Source</th></tr></thead>
+                  <tbody>
+                    <tr><td class="bty-label">Other land Remaining Other land</td>
+                      <td><input type="number" name="lu_other_remain_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="lu_other_remain_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Forestland → Other land</td>
+                      <td><input type="number" name="lu_forest_to_other_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="lu_forest_to_other_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Settlements → Other land</td>
+                      <td><input type="number" name="lu_settle_to_other_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="lu_settle_to_other_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Agricultural → Other land</td>
+                      <td><input type="number" name="lu_crop_to_other_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="lu_crop_to_other_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Grassland → Other land</td>
+                      <td><input type="number" name="lu_grass_to_other_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="lu_grass_to_other_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                    <tr><td class="bty-label">Wetland → Other land</td>
+                      <td><input type="number" name="lu_wet_to_other_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="text" name="lu_wet_to_other_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Wetlands -->
+          <div id="sub-lu-wetlands" class="sub-panel">
+            <div class="bty-table-wrap">
+              <div class="bty-table-title">Wetlands</div>
+              <div class="bty-table-scroll">
+                <table class="bty-table">
+                  <thead>
+                    <tr>
+                      <th>Climate</th><th>Type of Wetland/Flood land</th><th>Area (ha)</th>
+                      <th>Fraction flooded last 10 yrs</th><th>Ice Free Period (days)</th>
+                      <th>Ice Covered (days)</th><th>Source</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><select name="lu_wet_climate" class="field-input bty-input">
+                        <option value="">— climate —</option>
+                        <option>Tropical</option><option>Temperate</option><option>Boreal</option>
+                      </select></td>
+                      <td><select name="lu_wet_type" class="field-input bty-input">
+                        <option value="">— type —</option>
+                        <option>Peatlands</option><option>Rivers</option><option>Ponds</option>
+                        <option>Lake</option><option>Reservoirs</option>
+                      </select></td>
+                      <td><input type="number" name="lu_wet_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                      <td><input type="number" name="lu_wet_flood_frac" class="field-input bty-input" placeholder="0" step="0.01" min="0" max="1"/></td>
+                      <td><input type="number" name="lu_wet_ice_free" class="field-input bty-input" placeholder="0"/></td>
+                      <td><input type="number" name="lu_wet_ice_cov" class="field-input bty-input" placeholder="0"/></td>
+                      <td><input type="text" name="lu_wet_src" class="field-input bty-input" placeholder="Source"/></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div><!-- end sub-afolu-land -->
+
+        <!-- CROPLAND & BIOMASS BURNING -->
+        <div class="sub-panel" id="sub-afolu-crop">
+          <!-- Rice Cultivation -->
+          <div class="bty-table-wrap">
+            <div class="bty-table-title">Aggregate Sources — Rice Cultivation</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead>
+                  <tr>
+                    <th>Type of Crop</th>
+                    <th>Emission from Water Regime</th>
+                    <th>Area (ha)</th>
+                    <th>Source</th>
+                  </tr>
+                </thead>
+                <tbody id="riceCultTbody">
+                  <tr>
+                    <td><select name="rice_crop_type_0" class="field-input bty-input">
+                      <option value="">— select —</option>
+                      <option>Rice</option><option>Maize</option><option>Sugarcane</option>
+                    </select></td>
+                    <td><input type="text" name="rice_water_regime_0" class="field-input bty-input" placeholder="e.g. Continuously flooded"/></td>
+                    <td><input type="number" name="rice_area_ha_0" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="rice_src_0" class="field-input bty-input" placeholder="Source"/></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <button type="button" class="eb-add-btn" id="addRiceRow" style="margin-top:6px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add row
+            </button>
+          </div>
+
+          <!-- Biomass Burning -->
+          <div class="bty-table-wrap" style="margin-top:14px">
+            <div class="bty-table-title">Biomass Burning</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead>
+                  <tr>
+                    <th>Type of Land</th><th>Sub-category</th><th>Area (ha)</th><th>Source</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td class="bty-label" rowspan="4">Cropland / Agriculture</td>
+                    <td>Wheat residue</td>
+                    <td><input type="number" name="bb_wheat_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="bb_wheat_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>Maize residue</td>
+                    <td><input type="number" name="bb_maize_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="bb_maize_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>Rice residue</td>
+                    <td><input type="number" name="bb_rice_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="bb_rice_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>Sugarcane</td>
+                    <td><input type="number" name="bb_sugarcane_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="bb_sugarcane_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label" rowspan="2">Grassland</td>
+                    <td>Early dry season burn</td>
+                    <td><input type="number" name="bb_grass_early_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="bb_grass_early_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>Mid/late dry season</td>
+                    <td><input type="number" name="bb_grass_late_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="bb_grass_late_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label" rowspan="2">Forest land</td>
+                    <td>Tropical</td>
+                    <td><input type="number" name="bb_forest_tropical_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="bb_forest_tropical_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>Other Forest</td>
+                    <td><input type="number" name="bb_forest_other_ha" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="bb_forest_other_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- end sub-afolu-crop -->
+
+        <!-- FERTILIZER -->
+        <div class="sub-panel" id="sub-afolu-fert">
+          <div class="bty-table-wrap">
+            <div class="bty-table-title">Fertilizer Application</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead><tr><th>Data Item</th><th>Value</th><th>Unit</th><th>Source</th></tr></thead>
+                <tbody>
+                  <tr><td class="bty-label" colspan="4" style="background:#f0f4fb;font-weight:600;color:#1a2744">Annual Urea Fertilization</td></tr>
+                  <tr><td class="bty-label">Annual amount of Urea applied</td>
+                    <td><input type="number" name="fert_urea_tonnes" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><span style="padding:0 8px;color:#7a8ba8;font-size:0.8rem">tonnes/yr</span></td>
+                    <td><input type="text" name="fert_urea_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="bty-table-wrap" style="margin-top:14px">
+            <div class="bty-table-title">Fertilizer Applied — Nitrogen &amp; Indirect Methods</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead>
+                  <tr>
+                    <th>Crop Type</th>
+                    <th>Nitrogen Applied (tonnes)</th>
+                    <th>N Volatilization (%)</th>
+                    <th>N Leaches / Runoff (%)</th>
+                    <th>Source</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td class="bty-label">Rice</td>
+                    <td><input type="number" name="fert_rice_n" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="fert_rice_nvol" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="number" name="fert_rice_nrun" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="text" name="fert_rice_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Wheat</td>
+                    <td><input type="number" name="fert_wheat_n" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="fert_wheat_nvol" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="number" name="fert_wheat_nrun" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="text" name="fert_wheat_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Cereals</td>
+                    <td><input type="number" name="fert_cereal_n" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="fert_cereal_nvol" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="number" name="fert_cereal_nrun" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="text" name="fert_cereal_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Others</td>
+                    <td><input type="number" name="fert_other_n" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="fert_other_nvol" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="number" name="fert_other_nrun" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="text" name="fert_other_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- end sub-afolu-fert -->
+
+      </div><!-- end section 4 -->
+
+      <!-- ══════════════ SECTION 6: IPPU ══════════════ -->
+      <div class="form-section" data-section="6">
+        <div class="section-header">
+          <div class="section-number">07</div>
+          <div>
+            <h2 class="section-title">Industrial Processes &amp; Product Use (IPPU)</h2>
+          </div>
+        </div>
+
+        <div class="subsection-tabs">
+          <button type="button" class="sub-tab active" data-sub="ippu-mineral">Mineral Industries</button>
+          <button type="button" class="sub-tab" data-sub="ippu-chemical">Chemical Industries</button>
+          <button type="button" class="sub-tab" data-sub="ippu-metal">Metal Industries</button>
+          <button type="button" class="sub-tab" data-sub="ippu-nonenergy">Non-Energy Products</button>
+          <button type="button" class="sub-tab" data-sub="ippu-ods">Ozone Depleting Substances</button>
+          <button type="button" class="sub-tab" data-sub="ippu-refrig">Refrigeration &amp; AC</button>
+          <button type="button" class="sub-tab" data-sub="ippu-fire">Fire Protection / SF6 / N₂O</button>
+        </div>
+
+        <!-- MINERAL INDUSTRIES -->
+        <div class="sub-panel active" id="sub-ippu-mineral">
+          <div class="bty-table-wrap">
+            <div class="bty-table-title">Mineral Industries</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead><tr><th>Product</th><th>Type</th><th>Production (tonnes)</th><th>Source</th></tr></thead>
+                <tbody>
+                  <tr><td class="bty-label">Clinker / Cement</td><td>—</td>
+                    <td><input type="number" name="cement_clinker" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_cement_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label" rowspan="3">Lime</td><td>High Calcium</td>
+                    <td><input type="number" name="lime_high_ca" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_lime_hca_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>Dolomite</td>
+                    <td><input type="number" name="ippu_lime_dolomite" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_lime_dol_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>Hydraulic Lime</td>
+                    <td><input type="number" name="ippu_lime_hydraulic" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_lime_hyd_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label" rowspan="4">Glass</td>
+                    <td><select name="ippu_glass_type_0" class="field-input bty-input">
+                      <option value="">— type —</option>
+                      <option>Flat glass</option><option>Container glass</option>
+                      <option>Special glass</option><option>Glass fibre</option>
+                    </select></td>
+                    <td><input type="number" name="glass" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_glass_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td><select name="ippu_glass_type_1" class="field-input bty-input">
+                    <option value="">— type —</option>
+                    <option>Flat glass</option><option>Container glass</option>
+                    <option>Special glass</option><option>Glass fibre</option>
+                  </select></td>
+                    <td><input type="number" name="ippu_glass_prod_1" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_glass_src_1" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td><select name="ippu_glass_type_2" class="field-input bty-input">
+                    <option value="">— type —</option>
+                    <option>Flat glass</option><option>Container glass</option>
+                    <option>Special glass</option><option>Glass fibre</option>
+                  </select></td>
+                    <td><input type="number" name="ippu_glass_prod_2" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_glass_src_2" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td><select name="ippu_glass_type_3" class="field-input bty-input">
+                    <option value="">— type —</option>
+                    <option>Flat glass</option><option>Container glass</option>
+                    <option>Special glass</option><option>Glass fibre</option>
+                  </select></td>
+                    <td><input type="number" name="ippu_glass_prod_3" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_glass_src_3" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label" rowspan="4">Carbonate (Consumption)</td>
+                    <td><select name="ippu_carb_type_0" class="field-input bty-input">
+                      <option value="">— carbonate type —</option>
+                      <option>Limestone</option><option>Dolomite</option><option>Siderite</option>
+                      <option>Ankerite</option><option>Magnesite</option><option>Rhodochrosite</option>
+                    </select></td>
+                    <td><input type="number" name="ippu_carb_cons_0" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_carb_src_0" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td><select name="ippu_carb_type_1" class="field-input bty-input">
+                    <option value="">— carbonate type —</option>
+                    <option>Limestone</option><option>Dolomite</option><option>Siderite</option>
+                    <option>Ankerite</option><option>Magnesite</option><option>Rhodochrosite</option>
+                  </select></td>
+                    <td><input type="number" name="ippu_carb_cons_1" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_carb_src_1" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td><select name="ippu_carb_type_2" class="field-input bty-input">
+                    <option value="">— carbonate type —</option>
+                    <option>Limestone</option><option>Dolomite</option><option>Siderite</option>
+                    <option>Ankerite</option><option>Magnesite</option><option>Rhodochrosite</option>
+                  </select></td>
+                    <td><input type="number" name="ippu_carb_cons_2" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_carb_src_2" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td><select name="ippu_carb_type_3" class="field-input bty-input">
+                    <option value="">— carbonate type —</option>
+                    <option>Limestone</option><option>Dolomite</option><option>Siderite</option>
+                    <option>Ankerite</option><option>Magnesite</option><option>Rhodochrosite</option>
+                  </select></td>
+                    <td><input type="number" name="ippu_carb_cons_3" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_carb_src_3" class="field-input bty-input" placeholder="Source"/></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- end sub-ippu-mineral -->
+
+        <!-- CHEMICAL INDUSTRIES -->
+        <div class="sub-panel" id="sub-ippu-chemical">
+          <!-- Nitric Acid -->
+          <div class="bty-table-wrap">
+            <div class="bty-table-title">Nitric Acid Production</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead><tr><th>Product</th><th>Production (tonnes)</th><th>Source</th></tr></thead>
+                <tbody>
+                  <tr><td class="bty-label">Nitric Acid</td>
+                    <td><input type="number" name="ippu_nitric_acid" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_nitric_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Chemicals -->
+          <div class="bty-table-wrap" style="margin-top:10px">
+            <div class="bty-table-title">Chemicals</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead><tr><th>Chemical</th><th>Production (tonnes)</th><th>Source</th></tr></thead>
+                <tbody>
+                  <tr><td class="bty-label">Ammonia</td>
+                    <td><input type="number" name="ammonia" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_ammonia_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Ammonia Recovered CO₂ downstream (RCO2)</td>
+                    <td><input type="number" name="ippu_ammonia_rco2" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_ammonia_rco2_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Caprolactam</td>
+                    <td><input type="number" name="ippu_caprolactam" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_caprolactam_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Glyoxal</td>
+                    <td><input type="number" name="ippu_glyoxal" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_glyoxal_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Glyoxylic acid</td>
+                    <td><input type="number" name="ippu_glyoxylic" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_glyoxylic_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Silicon Carbide</td>
+                    <td><input type="number" name="ippu_sic" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_sic_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Petroleum Coke</td>
+                    <td><input type="number" name="ippu_pet_coke" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_pet_coke_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Calcium Carbide</td>
+                    <td><input type="number" name="ippu_ca_carbide" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_ca_carbide_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Titanium Dioxide</td>
+                    <td><input type="number" name="ippu_tio2" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_tio2_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Soda Ash</td>
+                    <td><input type="number" name="ippu_soda_ash" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_soda_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Petrochemicals -->
+          <div class="bty-table-wrap" style="margin-top:10px">
+            <div class="bty-table-title">Petrochemical Products</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead><tr><th>Product</th><th>Quantity (tonnes)</th><th>Source</th></tr></thead>
+                <tbody>
+                  <tr><td class="bty-label">Acrylonitrile</td>
+                    <td><input type="number" name="ippu_acrylonitrile" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_acr_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Carbon black</td>
+                    <td><input type="number" name="ippu_carbon_black" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_cb_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Ethylene</td>
+                    <td><input type="number" name="ippu_ethylene" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_eth_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Ethylene dichloride</td>
+                    <td><input type="number" name="ippu_edcl" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_edcl_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Ethylene oxide</td>
+                    <td><input type="number" name="ippu_eo" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_eo_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Methanol</td>
+                    <td><input type="number" name="ippu_methanol" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_methanol_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- HFC-22 Production -->
+          <div class="bty-table-wrap" style="margin-top:10px">
+            <div class="bty-table-title">Technology Used for HFC-22 Production</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead><tr><th>Technology</th><th>Quantity (tonnes)</th><th>Source</th></tr></thead>
+                <tbody>
+                  <tr><td class="bty-label">Old, unoptimised plants</td>
+                    <td><input type="number" name="ippu_hfc22_old" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_hfc22_old_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Plants of recent design, not specifically optimised</td>
+                    <td><input type="number" name="ippu_hfc22_new" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_hfc22_new_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- end sub-ippu-chemical -->
+
+        <!-- METAL INDUSTRIES -->
+        <div class="sub-panel" id="sub-ippu-metal">
+          <!-- Iron & Steel -->
+          <div class="bty-table-wrap">
+            <div class="bty-table-title">Iron &amp; Steel Production</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead><tr><th>Method / Product</th><th>Quantity (tonnes)</th><th>Source</th></tr></thead>
+                <tbody>
+                  <tr><td class="bty-label">Steel — Basic Oxygen Furnaces (BOF)</td>
+                    <td><input type="number" name="steel_bof" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_bof_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Steel — Electric Arc Furnaces (EAF)</td>
+                    <td><input type="number" name="steel_eaf" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_eaf_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Steel — Open Hearth Furnaces (OHF)</td>
+                    <td><input type="number" name="ippu_ohf" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_ohf_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Iron and Steel Production (total)</td>
+                    <td><input type="number" name="ippu_iron_steel_total" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_ist_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Pig Iron (not processed into steel)</td>
+                    <td><input type="number" name="ippu_pig_iron" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_pig_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Direct Reduced Iron</td>
+                    <td><input type="number" name="ippu_dri" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_dri_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Sinter Production</td>
+                    <td><input type="number" name="ippu_sinter" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_sinter_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Iron Pellet Production</td>
+                    <td><input type="number" name="ippu_pellet" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_pellet_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Blast Furnace Gas (BFG)</td>
+                    <td><input type="number" name="ippu_bfg" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_bfg_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Converted Gas (LDG)</td>
+                    <td><input type="number" name="ippu_ldg" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_ldg_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Ferroalloys -->
+          <div class="bty-table-wrap" style="margin-top:10px">
+            <div class="bty-table-title">Ferroalloy Production</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead><tr><th>Type of Ferroalloy</th><th>Quantity (tonnes)</th><th>Source</th></tr></thead>
+                <tbody>
+                  <tr><td class="bty-label">FeSi 45</td><td><input type="number" name="ippu_fesi45" class="field-input bty-input" placeholder="0" step="any"/></td><td><input type="text" name="ippu_fesi45_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">FeSi 65</td><td><input type="number" name="ippu_fesi65" class="field-input bty-input" placeholder="0" step="any"/></td><td><input type="text" name="ippu_fesi65_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">FeSi 75</td><td><input type="number" name="ippu_fesi75" class="field-input bty-input" placeholder="0" step="any"/></td><td><input type="text" name="ippu_fesi75_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">FeSi 90</td><td><input type="number" name="ippu_fesi90" class="field-input bty-input" placeholder="0" step="any"/></td><td><input type="text" name="ippu_fesi90_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Ferromanganeses (7% C)</td><td><input type="number" name="ippu_femn7" class="field-input bty-input" placeholder="0" step="any"/></td><td><input type="text" name="ippu_femn7_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Ferromanganeses (1% C)</td><td><input type="number" name="ippu_femn1" class="field-input bty-input" placeholder="0" step="any"/></td><td><input type="text" name="ippu_femn1_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Silicomanganese</td><td><input type="number" name="ippu_simn" class="field-input bty-input" placeholder="0" step="any"/></td><td><input type="text" name="ippu_simn_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Si Metal</td><td><input type="number" name="ippu_si" class="field-input bty-input" placeholder="0" step="any"/></td><td><input type="text" name="ippu_si_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Ferrochromium</td><td><input type="number" name="ippu_fecr" class="field-input bty-input" placeholder="0" step="any"/></td><td><input type="text" name="ippu_fecr_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Ferrochromium (with sinter plant)</td><td><input type="number" name="ippu_fecr_sinter" class="field-input bty-input" placeholder="0" step="any"/></td><td><input type="text" name="ippu_fecrs_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Aluminium -->
+          <div class="bty-table-wrap" style="margin-top:10px">
+            <div class="bty-table-title">Aluminium Production</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead><tr><th>Process / Product</th><th>Quantity (tonnes)</th><th>Source</th></tr></thead>
+                <tbody>
+                  <tr><td class="bty-label">Prebake process</td>
+                    <td><input type="number" name="ippu_al_prebake" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_al_pb_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Søderberg process</td>
+                    <td><input type="number" name="ippu_al_soderberg" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_al_sod_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Total CF4 from aluminium</td>
+                    <td><input type="number" name="ippu_al_cf4" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_al_cf4_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Total C2F6 from aluminium</td>
+                    <td><input type="number" name="ippu_al_c2f6" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_al_c2f6_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Lead & Zinc -->
+          <div class="bty-table-wrap" style="margin-top:10px">
+            <div class="bty-table-title">Lead &amp; Zinc Production</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead><tr><th>Process</th><th>Quantity (tonnes)</th><th>Source</th></tr></thead>
+                <tbody>
+                  <tr><td class="bty-label">Lead — Direct Smelting</td>
+                    <td><input type="number" name="ippu_lead_direct" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_lead_d_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Lead — Imperial Smelting Furnace</td>
+                    <td><input type="number" name="ippu_lead_isf" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_lead_isf_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Lead — Secondary materials</td>
+                    <td><input type="number" name="ippu_lead_secondary" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_lead_sec_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Zinc produced</td>
+                    <td><input type="number" name="ippu_zinc" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_zinc_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- end sub-ippu-metal -->
+
+        <!-- NON-ENERGY PRODUCTS -->
+        <div class="sub-panel" id="sub-ippu-nonenergy">
+          <div class="bty-table-wrap">
+            <div class="bty-table-title">Lubricants Consumption</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead><tr><th>Type of Lubricant</th><th>Consumption (tonnes)</th><th>Source</th></tr></thead>
+                <tbody>
+                  <tr><td class="bty-label">Lubricating oil (motor/industrial)</td>
+                    <td><input type="number" name="ippu_lube_oil" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_lube_oil_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Grease</td>
+                    <td><input type="number" name="ippu_grease" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_grease_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="bty-table-wrap" style="margin-top:10px">
+            <div class="bty-table-title">Other Non-Energy Products</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead><tr><th>Product</th><th>Value (tonnes)</th><th>Source</th></tr></thead>
+                <tbody>
+                  <tr><td class="bty-label">Paraffin wax consumption</td>
+                    <td><input type="number" name="ippu_paraffin_wax" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_paraffin_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Semiconductor / PV / TFT / Heat Transfer — shared 4-column layout -->
+          <div class="bty-table-wrap" style="margin-top:10px">
+            <div class="bty-table-title">Electronics &amp; Heat Transfer Industry Gases</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead>
+                  <tr>
+                    <th>Industry</th><th>Gas</th>
+                    <th>Design Capacity (Tonnes)</th>
+                    <th>Capacity Utilisation (%)</th>
+                    <th>Source</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td class="bty-label" rowspan="4">Semiconductor</td>
+                    <td>CF4</td>
+                    <td><input type="number" name="ippu_semi_cf4_cap" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_semi_cf4_util" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="text" name="ippu_semi_cf4_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>C2F6</td>
+                    <td><input type="number" name="ippu_semi_c2f6_cap" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_semi_c2f6_util" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="text" name="ippu_semi_c2f6_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>C3F8</td>
+                    <td><input type="number" name="ippu_semi_c3f8_cap" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_semi_c3f8_util" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="text" name="ippu_semi_c3f8_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>CHF3</td>
+                    <td><input type="number" name="ippu_semi_chf3_cap" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_semi_chf3_util" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="text" name="ippu_semi_chf3_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label" rowspan="4">Photovoltaic</td>
+                    <td>CF4</td>
+                    <td><input type="number" name="ippu_pv_cf4_cap" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_pv_cf4_util" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="text" name="ippu_pv_cf4_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>C2F6</td>
+                    <td><input type="number" name="ippu_pv_c2f6_cap" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_pv_c2f6_util" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="text" name="ippu_pv_c2f6_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>C3F8</td>
+                    <td><input type="number" name="ippu_pv_c3f8_cap" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_pv_c3f8_util" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="text" name="ippu_pv_c3f8_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>CHF3</td>
+                    <td><input type="number" name="ippu_pv_chf3_cap" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_pv_chf3_util" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="text" name="ippu_pv_chf3_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label" rowspan="4">TFT-FPD</td>
+                    <td>CF4</td>
+                    <td><input type="number" name="ippu_tft_cf4_cap" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_tft_cf4_util" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="text" name="ippu_tft_cf4_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>C2F6</td>
+                    <td><input type="number" name="ippu_tft_c2f6_cap" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_tft_c2f6_util" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="text" name="ippu_tft_c2f6_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>C3F8</td>
+                    <td><input type="number" name="ippu_tft_c3f8_cap" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_tft_c3f8_util" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="text" name="ippu_tft_c3f8_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td>CHF3</td>
+                    <td><input type="number" name="ippu_tft_chf3_cap" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_tft_chf3_util" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="text" name="ippu_tft_chf3_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Heat Transfer Fluid</td>
+                    <td>Heat Transfer Fluid</td>
+                    <td><input type="number" name="ippu_htf_cap" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_htf_util" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="text" name="ippu_htf_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- end sub-ippu-nonenergy -->
+
+        <!-- ODS -->
+        <div class="sub-panel" id="sub-ippu-ods">
+          <div class="bty-table-wrap">
+            <div class="bty-table-title">Chemical Production (Ozone Depleting Substances)</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead>
+                  <tr><th>Chemical</th><th>Production (t)</th><th>Import (t)</th><th>Export (t)</th><th>Destruction (t)</th><th>Source</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td class="bty-label">HFC-23</td>
+                    <td><input type="number" name="ippu_hfc23_prod" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_hfc23_imp" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_hfc23_exp" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_hfc23_dest" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_hfc23_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">HFC-32</td>
+                    <td><input type="number" name="ippu_hfc32_prod" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_hfc32_imp" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_hfc32_exp" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_hfc32_dest" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_hfc32_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">HFC-125</td>
+                    <td><input type="number" name="ippu_hfc125_prod" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_hfc125_imp" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_hfc125_exp" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_hfc125_dest" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_hfc125_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">HFC-134a</td>
+                    <td><input type="number" name="ippu_hfc134a_prod" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_hfc134a_imp" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_hfc134a_exp" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_hfc134a_dest" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_hfc134a_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">HFC-143a</td>
+                    <td><input type="number" name="ippu_hfc143a_prod" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_hfc143a_imp" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_hfc143a_exp" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_hfc143a_dest" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_hfc143a_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">HFC-152a</td>
+                    <td><input type="number" name="ippu_hfc152a_prod" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_hfc152a_imp" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_hfc152a_exp" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_hfc152a_dest" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_hfc152a_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">HFC-227ea</td>
+                    <td><input type="number" name="ippu_hfc227_prod" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_hfc227_imp" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_hfc227_exp" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_hfc227_dest" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_hfc227_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">HFC-236fa</td>
+                    <td><input type="number" name="ippu_hfc236_prod" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_hfc236_imp" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_hfc236_exp" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_hfc236_dest" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_hfc236_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Solvents / Aerosol -->
+          <div class="bty-table-wrap" style="margin-top:10px">
+            <div class="bty-table-title">Solvents (Non-Aerosol) Production</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead>
+                  <tr><th>Chemical</th><th>Sold in year t (t)</th><th>Sold in year t-1 (t)</th><th>Destroyed in t-1 (t)</th><th>Source</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td class="bty-label">HFC-134a</td>
+                    <td><input type="number" name="ippu_solv_134a_t" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_solv_134a_t1" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_solv_134a_d" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_solv_134a_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">HFC-152a</td>
+                    <td><input type="number" name="ippu_solv_152a_t" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_solv_152a_t1" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_solv_152a_d" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_solv_152a_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">HFC-227ea</td>
+                    <td><input type="number" name="ippu_solv_227_t" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_solv_227_t1" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_solv_227_d" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_solv_227_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- end sub-ippu-ods -->
+
+        <!-- REFRIGERATION & AC -->
+        <div class="sub-panel" id="sub-ippu-refrig">
+          <div class="bty-table-wrap">
+            <div class="bty-table-title">Refrigeration &amp; Air Conditioning Equipment — Refrigerant Inventory (Part A)</div>
+            <p class="bty-note">For each equipment type, enter refrigerant inventory at start/end of year, plus purchases and returns.</p>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead>
+                  <tr>
+                    <th>Equipment Type</th><th>Refrigerant</th>
+                    <th>Inventory start (t)</th><th>Inventory end (t)</th>
+                    <th>Purchased from producers (t)</th>
+                    <th>Returned by users (t)</th>
+                    <th>Returned after recycling (t)</th>
+                    <th>Delivered to users (t)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td class="bty-label" rowspan="4">Stand-alone Commercial</td>
+                    <td>HFC-134a</td>
+                    <td><input type="number" name="ref_com_134a_inv_s" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ref_com_134a_inv_e" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ref_com_134a_purch" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ref_com_134a_ret_u" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ref_com_134a_ret_r" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ref_com_134a_deliv" class="field-input bty-input" placeholder="0" step="any"/></td></tr>
+                  <tr><td>HFC-404A</td>
+                    <td><input type="number" name="ref_com_404a_inv_s" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ref_com_404a_inv_e" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ref_com_404a_purch" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ref_com_404a_ret_u" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ref_com_404a_ret_r" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ref_com_404a_deliv" class="field-input bty-input" placeholder="0" step="any"/></td></tr>
+                  <tr><td>R-410A</td>
+                    <td><input type="number" name="ref_com_410a_inv_s" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ref_com_410a_inv_e" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ref_com_410a_purch" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ref_com_410a_ret_u" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ref_com_410a_ret_r" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ref_com_410a_deliv" class="field-input bty-input" placeholder="0" step="any"/></td></tr>
+                  <tr><td>R-507A</td>
+                    <td><input type="number" name="ref_com_507a_inv_s" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ref_com_507a_inv_e" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ref_com_507a_purch" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ref_com_507a_ret_u" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ref_com_507a_ret_r" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ref_com_507a_deliv" class="field-input bty-input" placeholder="0" step="any"/></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- end sub-ippu-refrig -->
+
+        <!-- FIRE PROTECTION / SF6 / N2O -->
+        <div class="sub-panel" id="sub-ippu-fire">
+          <!-- SF6 Equipment -->
+          <div class="bty-table-wrap">
+            <div class="bty-table-title">SF₆ from Electrical Equipment</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead>
+                  <tr>
+                    <th>Equipment</th>
+                    <th>Total SF₆ consumed by manufacturers (t)</th>
+                    <th>New equipment filled on-site (t)</th>
+                    <th>Leakage/servicing/failures (t)</th>
+                    <th>Fraction remaining at retirement (%)</th>
+                    <th>Source</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td class="bty-label">Sealed Pressure Electrical Equipment</td>
+                    <td><input type="number" name="ippu_sf6_sealed_cons" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_sf6_sealed_fill" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_sf6_sealed_leak" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_sf6_sealed_ret" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="text" name="ippu_sf6_sealed_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Closed Pressure Electrical Equipment</td>
+                    <td><input type="number" name="ippu_sf6_closed_cons" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_sf6_closed_fill" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_sf6_closed_leak" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_sf6_closed_ret" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="text" name="ippu_sf6_closed_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Gas Insulated Electrical Equipment</td>
+                    <td><input type="number" name="ippu_sf6_gi_cons" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_sf6_gi_fill" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_sf6_gi_leak" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_sf6_gi_ret" class="field-input bty-input" placeholder="%" step="0.1"/></td>
+                    <td><input type="text" name="ippu_sf6_gi_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Particle Accelerators -->
+          <div class="bty-table-wrap" style="margin-top:10px">
+            <div class="bty-table-title">Industrial/Medical Accelerator Emissions</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead>
+                  <tr><th>Process Description</th><th>Number of Particle Accelerators</th><th>Source</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td class="bty-label">No. planes in AWCS fleet</td>
+                    <td><input type="number" name="ippu_awcs_planes" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="ippu_awcs_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">University/research particle accelerators</td>
+                    <td><input type="number" name="ippu_particle_univ" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="ippu_particle_univ_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Industrial Particle Accelerators – high voltage</td>
+                    <td><input type="number" name="ippu_acc_industrial_hv" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="ippu_acc_ihv_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Industrial Particle Accelerators – low voltage</td>
+                    <td><input type="number" name="ippu_acc_industrial_lv" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="ippu_acc_ilv_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">Medical (Radiotherapy)</td>
+                    <td><input type="number" name="ippu_acc_medical" class="field-input bty-input" placeholder="0"/></td>
+                    <td><input type="text" name="ippu_acc_med_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Double-glazed windows -->
+          <div class="bty-table-wrap" style="margin-top:10px">
+            <div class="bty-table-title">Double-Glazed Sound-Proof Windows (SF₆)</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead><tr><th>SF₆ Purchased (t)</th><th>SF₆ Used (t)</th><th>Amount Left in Window at End of Life (t)</th><th>Source</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td><input type="number" name="ippu_sf6_win_purch" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_sf6_win_used" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="number" name="ippu_sf6_win_left" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_sf6_win_src" class="field-input bty-input" placeholder="Source"/></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- N2O Medical -->
+          <div class="bty-table-wrap" style="margin-top:10px">
+            <div class="bty-table-title">N₂O Medical Application and Food Industry</div>
+            <div class="bty-table-scroll">
+              <table class="bty-table">
+                <thead><tr><th>Data Item</th><th>Value (tonnes)</th><th>Source</th></tr></thead>
+                <tbody>
+                  <tr><td class="bty-label">N₂O supplied in year t (medical)</td>
+                    <td><input type="number" name="ippu_n2o_med_t" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_n2o_med_t_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                  <tr><td class="bty-label">N₂O supplied in year t-1 (medical)</td>
+                    <td><input type="number" name="ippu_n2o_med_t1" class="field-input bty-input" placeholder="0" step="any"/></td>
+                    <td><input type="text" name="ippu_n2o_med_t1_src" class="field-input bty-input" placeholder="Source"/></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+      <!-- ══════════════ SECTION 7: Target Setting ══════════════ -->
+      <div class="form-section" data-section="7">
+        <div class="section-header">
+          <div class="section-number">08</div>
+          <div>
+            <h2 class="section-title">Target & Scenario Settings</h2>
+            <p class="section-desc">Set your ambition level and technology pathways</p>
+          </div>
+        </div>
+ 
+        <div class="field-grid">
+          <div class="field-group">
+            <label class="field-label">Reduction Target vs BAU</label>
+            <div class="input-with-unit">
+              <input type="number" name="target_pct_input" class="field-input" value="45" min="5" max="100" step="1"/>
+              <span class="unit-badge">%</span>
+            </div>
+          </div>
+          <div class="field-group full">
+            <label class="field-label">Renewable Energy Share by Target Year</label>
+            <div class="slider-wrap">
+              <input type="range" name="renewable_pct" class="range-slider" min="0" max="100" value="40" step="5"/>
+              <span class="range-val" id="renewableVal">40%</span>
+            </div>
+          </div>
+          <div class="field-group full">
+            <label class="field-label">EV Penetration by Target Year</label>
+            <div class="slider-wrap">
+              <input type="range" name="ev_pct" class="range-slider" min="0" max="100" value="30" step="5"/>
+              <span class="range-val" id="evVal">30%</span>
+            </div>
+          </div>
+        </div>
+ 
+        <!-- Submit CTA -->
+        <div class="submit-area">
+          <div class="submit-summary" id="submitSummary">
+            <div class="ss-item"><span class="ss-label">City</span><span class="ss-val" id="ss-city">—</span></div>
+            <div class="ss-item"><span class="ss-label">State</span><span class="ss-val" id="ss-state">—</span></div>
+            <div class="ss-item"><span class="ss-label">Population</span><span class="ss-val" id="ss-pop">—</span></div>
+            <div class="ss-item"><span class="ss-label">Target Year</span><span class="ss-val" id="ss-yr">2050</span></div>
+          </div>
+          <button type="submit" class="btn-calculate" id="calculateBtn">
+            <span class="btn-text">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+              </svg>
+              Calculate GHG Inventory
+            </span>
+            <span class="btn-loading hidden">
+              <svg class="spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12a9 9 0 11-6.219-8.56"/>
+              </svg>
+              Computing…
+            </span>
+          </button>
+        </div>
+      </div>
+ 
+    </form>
+ 
+    <!-- Nav Buttons -->
+    <div class="form-nav">
+      <button type="button" class="nav-btn prev-btn" id="prevBtn" disabled>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        Back
+      </button>
+      <div class="nav-dots" id="navDots"></div>
+      <button type="button" class="nav-btn next-btn" id="nextBtn">
+        Next
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+  </main>
+ 
+  <footer class="site-footer">
+    <p>ASCENT v2.0 · WRI India · IPCC 2019 GPC Framework · AR6 GWP (CH₄=29.8, N₂O=273)</p>
+  </footer>
+ 
+  <script id="citiesData" type="application/json">{{ cities | tojson | safe }}</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.2/axios.min.js"></script>
+  <script src="{{ url_for('static', filename='js/form.js') }}?v=2"></script>
+  <script src="{{ url_for('static', filename='js/single-page.js') }}?v=2"></script>
+  <script src="{{ url_for('static', filename='js/excel-ux.js') }}?v=2"></script>
+  <style>
+    /* ── Base & Target Year Table ─────────────────────────────── */
+    .bty-table-wrap {
+      margin: 1.25rem 0 0;
+      background: #fff;
+      border-radius: 10px;
+      border: 1px solid #dde3ef;
+      overflow: hidden;
+    }
+    .bty-table-title {
+      background: #1a2744;
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.92rem;
+      padding: 0.6rem 1.1rem;
+      letter-spacing: 0.03em;
+    }
+    .bty-table-scroll { overflow-x: auto; }
+    .bty-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      min-width: 700px;
+    }
+    .bty-table thead tr th {
+      background: #1a2744;
+      color: #fff;
+      padding: 0.55rem 0.75rem;
+      text-align: center;
+      font-weight: 600;
+      border-right: 1px solid #2d3a5a;
+      white-space: nowrap;
+    }
+    .bty-table tbody tr { border-bottom: 1px solid #e8ecf5; }
+    .bty-table tbody tr:nth-child(odd) { background: #f0f4fb; }
+    .bty-table tbody tr:nth-child(even) { background: #e8f4f3; }
+    .bty-table td {
+      padding: 0.45rem 0.6rem;
+      vertical-align: middle;
+      border-right: 1px solid #dde3ef;
+    }
+    .bty-label {
+      font-weight: 600;
+      color: #1a2744;
+      white-space: nowrap;
+      min-width: 110px;
+    }
+    .bty-input {
+      min-width: 80px;
+      width: 100%;
+      font-size: 0.82rem !important;
+      padding: 0.35rem 0.5rem !important;
+    }
+    .bty-source { min-width: 110px; }
+    .bty-note {
+      font-size: 0.77rem;
+      color: #555;
+      padding: 0.5rem 1rem 0.6rem;
+      background: #f7f9fc;
+      border-top: 1px solid #dde3ef;
+      margin: 0;
+    }
+    .field-hint { font-size: 0.74rem; color: #888; margin-top: 2px; display: block; }
+  </style>
+  <script>
+    // ── Growth Factor Auto-calculation ───────────────────────
+    (function () {
+      const rows = [
+        { pop: 'base_pop_growth',     gdp: 'base_gdp_growth',     factorId: 'btyFactorBase' },
+        { pop: 'interim1_pop_growth', gdp: 'interim1_gdp_growth', factorId: 'btyFactorInterim1' },
+        { pop: 'interim2_pop_growth', gdp: 'interim2_gdp_growth', factorId: 'btyFactorInterim2' },
+        { pop: 'target_pop_growth',   gdp: 'target_gdp_growth',   factorId: 'btyFactorTarget' },
+      ];
+ 
+      function calcFactor(popRate, gdpRate) {
+        // Factor % = ((1 + pop/100) * (1 + gdp/100) - 1) * 100
+        return ((1 + popRate / 100) * (1 + gdpRate / 100) - 1) * 100;
+      }
+ 
+      function updateFactor(row) {
+        const popEl    = document.querySelector(`[name="${row.pop}"]`);
+        const gdpEl    = document.querySelector(`[name="${row.gdp}"]`);
+        const factorEl = document.getElementById(row.factorId);
+        if (!popEl || !gdpEl || !factorEl) return;
+        const p = parseFloat(popEl.value);
+        const g = parseFloat(gdpEl.value);
+        if (!isNaN(p) && !isNaN(g)) {
+          factorEl.value = calcFactor(p, g).toFixed(2);
+        } else {
+          factorEl.value = '';
+        }
+      }
+ 
+      rows.forEach(row => {
+        const popEl = document.querySelector(`[name="${row.pop}"]`);
+        const gdpEl = document.querySelector(`[name="${row.gdp}"]`);
+        if (popEl) popEl.addEventListener('input', () => updateFactor(row));
+        if (gdpEl) gdpEl.addEventListener('input', () => updateFactor(row));
+        // Initial calc on load
+        updateFactor(row);
+      });
+ 
+      // Also sync pop_growth_rate (basic info) → base_pop_growth default
+      const popGlobalEl = document.getElementById('popGrowthRate');
+      const basePopEl   = document.querySelector('[name="base_pop_growth"]');
+      if (popGlobalEl && basePopEl) {
+        popGlobalEl.addEventListener('input', () => {
+          if (basePopEl.value === '' || basePopEl.dataset.userEdited !== 'true') {
+            basePopEl.value = popGlobalEl.value;
+            updateFactor(rows[0]);
+          }
+        });
+        basePopEl.addEventListener('input', () => { basePopEl.dataset.userEdited = 'true'; });
+      }
+    })();
+  </script>
+  <script>
+    // Auto-calculate Average Temperature from Min + Max
+    (function () {
+      const tMin  = document.querySelector('[name="temp_min"]');
+      const tMax  = document.querySelector('[name="temp_max"]');
+      const tAvg  = document.getElementById('tempAvg');
+      function recalc() {
+        const mn = parseFloat(tMin.value);
+        const mx = parseFloat(tMax.value);
+        if (!isNaN(mn) && !isNaN(mx)) {
+          tAvg.value = ((mn + mx) / 2).toFixed(2);
+        } else {
+          tAvg.value = '';
+        }
+      }
+      if (tMin && tMax && tAvg) {
+        tMin.addEventListener('input', recalc);
+        tMax.addEventListener('input', recalc);
+      }
+    })();
+  </script>
+</body>
+</html>

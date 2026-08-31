@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Target Setting — ASCENT</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}"/>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/target.css') }}"/>
+<script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+</head>
+<body class="target-body">
+
+<header class="tgt-topbar">
+  <div class="tgt-brand">
+    <img src="{{ url_for('static', filename='img/logo-cream.png') }}" alt="ASCENT" class="tgt-logo"/>
+    <div>
+      <div class="tgt-title">Target Setting</div>
+      <div class="tgt-sub">Play with your city's decarbonisation pathway</div>
+    </div>
+  </div>
+  <div class="tgt-actions">
+    <a href="/" class="tgt-btn ghost">← Questionnaire</a>
+    <a href="/results" class="tgt-btn ghost">Results</a>
+  </div>
+</header>
+
+<main class="tgt-main">
+
+  <!-- Controls bar -->
+  <section class="tgt-controls">
+    <div class="ctrl-group">
+      <label class="ctrl-label">BAU calculations are based on</label>
+      <select id="basisSelect" class="ctrl-select">
+        <option value="population">Population Growth Rate</option>
+        <option value="gdp">GDP Growth Rate</option>
+      </select>
+    </div>
+
+    <div class="ctrl-group">
+      <label class="ctrl-label">How do you want to set targets?</label>
+      <div class="toggle-switch" id="modeToggle" data-mode="pct">
+        <button class="toggle-opt active" data-mode="pct">
+          <span class="toggle-icon">%</span> By Percentage
+        </button>
+        <button class="toggle-opt" data-mode="value">
+          <span class="toggle-icon">#</span> By Absolute Value
+        </button>
+      </div>
+    </div>
+
+    <div class="ctrl-hint" id="modeHint">
+      Set each milestone year as a <strong>% cut below its BAU</strong>. Flip the toggle to enter an absolute MtCO₂e reduction instead.
+    </div>
+  </section>
+
+  <div class="tgt-loading" id="tgtLoading">
+    <div class="spinner"></div>
+    <p>Loading your city's BAU pathway…</p>
+    <p class="tgt-loading-note">If this doesn't load, make sure you've filled the Questionnaire and pressed <em>Calculate</em> at least once.</p>
+  </div>
+
+  <div id="tgtContent" style="display:none">
+
+    <!-- Year cards -->
+    <section class="year-cards" id="yearCards"></section>
+
+    <!-- Live chart -->
+    <section class="tgt-chart-card">
+      <div class="chart-head">
+        <h3>Emission Pathway</h3>
+        <div class="chart-legend">
+          <span class="lg lg-bau">BAU</span>
+          <span class="lg lg-tgt">Your Target</span>
+        </div>
+      </div>
+      <div id="tgtChart" class="tgt-chart"></div>
+    </section>
+
+    <!-- Summary strip -->
+    <section class="tgt-summary" id="tgtSummary"></section>
+  </div>
+
+</main>
+
+<script>
+const YEAR_META = {};   // year -> {bau_mt}
+let STATE = {
+  mode: "pct",
+  basis: "population",
+  rows: {},   // year -> {pct, value}
+};
+
+const fmt = (n, dp=2) => (n===null||n===undefined||isNaN(n)) ? "—" :
+  Number(n).toLocaleString("en-IN", {minimumFractionDigits:dp, maximumFractionDigits:dp});
+
+async function recalc() {
+  const res = await fetch("/api/target-calc", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({mode: STATE.mode, basis: STATE.basis, rows: STATE.rows}),
+  });
+  if (!res.ok) { showEmpty(); return; }
+  const data = await res.json();
+  render(data);
+}
+
+function showEmpty() {
+  document.getElementById("tgtLoading").style.display = "block";
+  document.getElementById("tgtContent").style.display = "none";
+}
+
+let FIRST_LOAD = true;
+function render(data) {
+  document.getElementById("tgtLoading").style.display = "none";
+  document.getElementById("tgtContent").style.display = "block";
+
+  // On the very first render, seed the Excel's default reduction targets
+  // (Interim1 40%, Interim2 50%, Target 100%) so the tool opens meaningfully.
+  if (FIRST_LOAD && STATE.mode === "pct" && Object.keys(STATE.rows).length === 0) {
+    FIRST_LOAD = false;
+    const yrs = data.years;
+    if (yrs.length === 4) {
+      STATE.rows[yrs[1]] = {pct: 40};
+      STATE.rows[yrs[2]] = {pct: 50};
+      STATE.rows[yrs[3]] = {pct: 100};
+      recalc();
+      return;
+    }
+  }
+
+  const cards = document.getElementById("yearCards");
+  cards.innerHTML = "";
+  data.table.forEach((row, i) => {
+    const isBase = i === 0;
+    const maxBau = Math.max(...data.table.map(r => r.bau_mt), 0.0001);
+    const bauW = Math.max(4, row.bau_mt / maxBau * 100);
+    const tgtW = Math.max(0, row.target_mt / maxBau * 100);
+
+    const card = document.createElement("div");
+    card.className = "year-card" + (isBase ? " base" : "");
+    card.innerHTML = `
+      <div class="yc-head">
+        <div class="yc-label">${row.label}</div>
+        <div class="yc-year">${row.year}</div>
+      </div>
+      <div class="yc-bars">
+        <div class="yc-bar-row">
+          <span class="yc-bar-tag">BAU</span>
+          <div class="yc-track"><div class="yc-fill bau" style="width:${bauW}%"></div></div>
+          <span class="yc-bar-num">${fmt(row.bau_mt)}</span>
+        </div>
+        <div class="yc-bar-row">
+          <span class="yc-bar-tag">Target</span>
+          <div class="yc-track"><div class="yc-fill tgt" style="width:${tgtW}%"></div></div>
+          <span class="yc-bar-num">${fmt(row.target_mt)}</span>
+        </div>
+      </div>
+      ${isBase ? `<div class="yc-baseline">Baseline year — no reduction applied</div>` :
+        `<div class="yc-input-area">
+           ${STATE.mode === "pct" ? `
+             <label class="yc-input-label">Reduction below BAU</label>
+             <div class="yc-slider-row">
+               <input type="range" class="yc-slider" data-year="${row.year}" data-kind="pct"
+                      min="0" max="100" step="1" value="${row.target_pct}"/>
+               <span class="yc-slider-val">${fmt(row.target_pct,0)}%</span>
+             </div>
+           ` : `
+             <label class="yc-input-label">Absolute reduction (MtCO₂e)</label>
+             <div class="yc-slider-row">
+               <input type="range" class="yc-slider" data-year="${row.year}" data-kind="value"
+                      min="0" max="${(row.bau_mt).toFixed(2)}" step="0.01" value="${row.target_value}"/>
+               <span class="yc-slider-val">${fmt(row.target_value)} Mt</span>
+             </div>
+           `}
+           <div class="yc-reduction">↓ ${fmt(row.reduction_mt)} MtCO₂e cut</div>
+         </div>`}
+    `;
+    cards.appendChild(card);
+  });
+
+  // Wire sliders
+  cards.querySelectorAll(".yc-slider").forEach(sl => {
+    sl.addEventListener("input", () => {
+      const yr = sl.dataset.year, kind = sl.dataset.kind;
+      STATE.rows[yr] = STATE.rows[yr] || {};
+      STATE.rows[yr][kind] = parseFloat(sl.value);
+      recalc();
+    });
+  });
+
+  drawChart(data.table);
+  drawSummary(data.table);
+}
+
+function drawChart(table) {
+  if (typeof Plotly === "undefined") return;  // CDN not loaded — skip gracefully
+  const years = table.map(r => r.year);
+  const bau   = table.map(r => r.bau_mt);
+  const tgt   = table.map(r => r.target_mt);
+  Plotly.react("tgtChart", [
+    {x: years, y: bau, name: "BAU", mode: "lines+markers",
+     line: {color: "#e07a5f", width: 3}, marker: {size: 9}},
+    {x: years, y: tgt, name: "Target", mode: "lines+markers",
+     line: {color: "#2a9d8f", width: 3}, marker: {size: 9},
+     fill: "tonexty", fillcolor: "rgba(42,157,143,0.10)"},
+  ], {
+    margin: {l: 55, r: 20, t: 10, b: 40},
+    xaxis: {tickmode: "array", tickvals: years, title: ""},
+    yaxis: {title: "MtCO₂eq", rangemode: "tozero"},
+    showlegend: false,
+    paper_bgcolor: "rgba(0,0,0,0)",
+    plot_bgcolor: "rgba(0,0,0,0)",
+    font: {family: "Inter, sans-serif", size: 12},
+    height: 340,
+  }, {displayModeBar: false, responsive: true});
+}
+
+function drawSummary(table) {
+  const base = table[0].bau_mt;
+  const targetRow = table[table.length - 1];
+  const totalCut = targetRow.bau_mt - targetRow.target_mt;
+  const pctCut = targetRow.bau_mt ? (totalCut / targetRow.bau_mt * 100) : 0;
+  const el = document.getElementById("tgtSummary");
+  el.innerHTML = `
+    <div class="sum-tile">
+      <div class="sum-label">Base year (${table[0].year})</div>
+      <div class="sum-val">${fmt(base)}<span>MtCO₂e</span></div>
+    </div>
+    <div class="sum-tile">
+      <div class="sum-label">Target-year BAU (${targetRow.year})</div>
+      <div class="sum-val">${fmt(targetRow.bau_mt)}<span>MtCO₂e</span></div>
+    </div>
+    <div class="sum-tile accent">
+      <div class="sum-label">Your target (${targetRow.year})</div>
+      <div class="sum-val">${fmt(targetRow.target_mt)}<span>MtCO₂e</span></div>
+    </div>
+    <div class="sum-tile cut">
+      <div class="sum-label">Cut vs BAU at target</div>
+      <div class="sum-val">${fmt(pctCut,1)}<span>%</span></div>
+    </div>
+  `;
+}
+
+// Controls
+document.getElementById("basisSelect").addEventListener("change", e => {
+  STATE.basis = e.target.value;
+  recalc();
+});
+
+document.querySelectorAll("#modeToggle .toggle-opt").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("#modeToggle .toggle-opt").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    STATE.mode = btn.dataset.mode;
+    document.getElementById("modeToggle").dataset.mode = STATE.mode;
+    document.getElementById("modeHint").innerHTML = STATE.mode === "pct"
+      ? `Set each milestone year as a <strong>% cut below its BAU</strong>. Flip the toggle to enter an absolute MtCO₂e reduction instead.`
+      : `Set each milestone year as an <strong>absolute MtCO₂e reduction</strong> from its BAU. Flip the toggle to enter a percentage instead.`;
+    STATE.rows = {};  // reset per-year inputs when switching modes
+    recalc();
+  });
+});
+
+// Seed sensible starting targets (like the Excel: 40% / 50% / 100%)
+STATE.rows = {};
+recalc();
+</script>
+</body>
+</html>

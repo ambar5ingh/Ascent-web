@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ASCENT — Sign in</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <style>
+    body.login-body {
+      background: var(--dark-green);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      color: var(--cream);
+    }
+    .login-bg {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        radial-gradient(circle at 20% 30%, rgba(120,200,165,0.10), transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(31,54,99,0.25),   transparent 55%),
+        radial-gradient(circle at 50% 100%, rgba(246,179,31,0.06), transparent 50%);
+    }
+    .login-shell {
+      position: relative; z-index: 2;
+      width: 100%; max-width: 440px;
+      display: flex; flex-direction: column;
+      align-items: center;
+      gap: 32px;
+    }
+    .login-logo {
+      width: 260px; height: auto;
+      filter: drop-shadow(0 4px 20px rgba(0,0,0,0.3));
+    }
+    .login-card {
+      width: 100%;
+      background: rgba(245, 232, 201, 0.04);
+      border: 1px solid rgba(245, 232, 201, 0.15);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-radius: 18px;
+      padding: 36px 32px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+    }
+    .login-title {
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: 1.5rem;
+      color: var(--cream);
+      letter-spacing: -0.01em;
+      margin-bottom: 6px;
+      text-align: center;
+    }
+    .login-sub {
+      font-size: 0.86rem;
+      color: rgba(245,232,201,0.65);
+      text-align: center;
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+    .login-tabs {
+      display: flex;
+      background: rgba(19, 50, 44, 0.6);
+      border: 1px solid rgba(245,232,201,0.12);
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 22px;
+    }
+    .login-tab {
+      flex: 1;
+      padding: 9px 12px;
+      border: none; background: transparent;
+      font-family: var(--font-body);
+      font-size: 0.84rem; font-weight: 600;
+      color: rgba(245,232,201,0.55);
+      cursor: pointer;
+      border-radius: 7px;
+      transition: all 0.2s;
+    }
+    .login-tab.active {
+      background: var(--mint);
+      color: var(--dark-green);
+      box-shadow: 0 2px 8px rgba(120,200,165,0.3);
+    }
+    .login-tab:not(.active):hover { color: var(--cream); }
+
+    .login-field {
+      display: flex; flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .login-field label {
+      font-size: 0.74rem;
+      font-weight: 600;
+      color: rgba(245,232,201,0.75);
+      letter-spacing: 0.02em;
+    }
+    .login-field input {
+      width: 100%;
+      padding: 12px 14px;
+      background: rgba(19, 50, 44, 0.5);
+      border: 1.5px solid rgba(245,232,201,0.15);
+      border-radius: 9px;
+      font-family: var(--font-body);
+      font-size: 0.92rem;
+      color: var(--cream);
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .login-field input::placeholder { color: rgba(245,232,201,0.35); }
+    .login-field input:focus {
+      border-color: var(--mint);
+      background: rgba(19, 50, 44, 0.75);
+      box-shadow: 0 0 0 3px rgba(120,200,165,0.15);
+    }
+    .login-hint {
+      font-size: 0.72rem;
+      color: rgba(245,232,201,0.5);
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 13px 20px;
+      background: var(--amber);
+      color: var(--navy);
+      border: none;
+      border-radius: 9px;
+      font-family: var(--font-body);
+      font-size: 0.95rem; font-weight: 700;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      transition: transform 0.18s, box-shadow 0.18s, background 0.18s;
+      margin-top: 8px;
+    }
+    .login-btn:hover {
+      transform: translateY(-1px);
+      background: #ffc83a;
+      box-shadow: 0 8px 22px rgba(246,179,31,0.35);
+    }
+    .login-btn:active { transform: translateY(0); }
+    .login-btn:disabled { opacity: 0.6; cursor: wait; }
+
+    .login-msg {
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.83rem;
+      margin-bottom: 14px;
+      display: none;
+    }
+    .login-msg.error {
+      background: rgba(239,68,68,0.12);
+      border: 1px solid rgba(239,68,68,0.35);
+      color: #fca5a5;
+      display: block;
+    }
+    .login-msg.success {
+      background: rgba(120,200,165,0.12);
+      border: 1px solid rgba(120,200,165,0.35);
+      color: var(--mint);
+      display: block;
+    }
+
+    .login-foot {
+      text-align: center;
+      font-size: 0.74rem;
+      color: rgba(245,232,201,0.4);
+      letter-spacing: 0.03em;
+    }
+
+    @media (max-width: 480px) {
+      .login-logo { width: 200px; }
+      .login-card { padding: 28px 22px; }
+    }
+  </style>
+</head>
+<body class="login-body">
+  <div class="login-bg"></div>
+
+  <div class="login-shell">
+    <img src="{{ url_for('static', filename='img/logo-cream.png') }}"
+         alt="ASCENT" class="login-logo">
+
+    <div class="login-card">
+      <div class="login-tabs">
+        <button type="button" class="login-tab active" data-mode="login">Sign in</button>
+        <button type="button" class="login-tab" data-mode="register">Create account</button>
+      </div>
+
+      <h1 class="login-title" id="formTitle">Welcome back</h1>
+      <p class="login-sub" id="formSub">
+        Enter your credentials to access your saved assessments.
+      </p>
+
+      <div class="login-msg" id="loginMsg"></div>
+
+      <form id="loginForm" novalidate>
+        <div class="login-field">
+          <label for="username">Username</label>
+          <input id="username" name="username" type="text"
+                 autocomplete="username" placeholder="Enter your username" required>
+        </div>
+
+        <div class="login-field">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password"
+                 autocomplete="current-password" placeholder="Enter your password" required>
+          <span class="login-hint" id="pwHint">
+            Tip: for quick access, you can use the same value for both.
+          </span>
+        </div>
+
+        <button type="submit" class="login-btn" id="submitBtn">Sign in</button>
+      </form>
+    </div>
+
+    <p class="login-foot">ASCENT · WRI India · Advanced Scenarios and Carbon Emissions Navigation Tool</p>
+  </div>
+
+  <script>
+    (function () {
+      const tabs       = document.querySelectorAll('.login-tab');
+      const title      = document.getElementById('formTitle');
+      const sub        = document.getElementById('formSub');
+      const submitBtn  = document.getElementById('submitBtn');
+      const form       = document.getElementById('loginForm');
+      const msg        = document.getElementById('loginMsg');
+      const userEl     = document.getElementById('username');
+      const pwEl       = document.getElementById('password');
+      const pwHint     = document.getElementById('pwHint');
+      let mode = 'login';
+
+      tabs.forEach(t => t.addEventListener('click', () => {
+        tabs.forEach(x => x.classList.remove('active'));
+        t.classList.add('active');
+        mode = t.dataset.mode;
+        if (mode === 'login') {
+          title.textContent = 'Welcome back';
+          sub.textContent = 'Enter your credentials to access your saved assessments.';
+          submitBtn.textContent = 'Sign in';
+          pwEl.setAttribute('autocomplete', 'current-password');
+          pwHint.textContent = 'Tip: for quick access, you can use the same value for both.';
+        } else {
+          title.textContent = 'Create your account';
+          sub.textContent = 'Pick a username and password to save your work across sessions.';
+          submitBtn.textContent = 'Create account';
+          pwEl.setAttribute('autocomplete', 'new-password');
+          pwHint.textContent = 'For demo simplicity, password may match your username.';
+        }
+        msg.className = 'login-msg';
+        msg.textContent = '';
+      }));
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = userEl.value.trim();
+        const password = pwEl.value;
+        if (!username || !password) {
+          show('error', 'Username and password are both required.');
+          return;
+        }
+        submitBtn.disabled = true;
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = mode === 'login' ? 'Signing in…' : 'Creating account…';
+
+        try {
+          const res = await fetch(`/auth/${mode}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+          });
+          const data = await res.json();
+          if (!res.ok || !data.ok) {
+            show('error', data.error || 'Authentication failed.');
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            return;
+          }
+          show('success', mode === 'login' ? 'Signed in. Redirecting…' : 'Account created. Redirecting…');
+          setTimeout(() => { window.location.href = data.redirect || '/'; }, 600);
+        } catch (err) {
+          show('error', 'Network error. Please try again.');
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+        }
+      });
+
+      function show(kind, text) {
+        msg.className = 'login-msg ' + kind;
+        msg.textContent = text;
+      }
+    })();
+  </script>
+</body>
+</html>
